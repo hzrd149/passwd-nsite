@@ -53,8 +53,36 @@ function IdentityAvatar({
   );
 }
 
+function DirectoryInput({
+  onChange,
+}: {
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) {
+      return;
+    }
+
+    input.multiple = true;
+    input.setAttribute("webkitdirectory", "");
+    input.setAttribute("directory", "");
+  }, []);
+
+  return (
+    <input
+      ref={inputRef}
+      className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-400 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-950"
+      type="file"
+      multiple
+      onChange={onChange}
+    />
+  );
+}
+
 function PublishPage() {
-  const folderInputRef = useRef<HTMLInputElement | null>(null);
   const [phase, setPhase] = useState<PublishPhase>("connect");
   const [statusMessage, setStatusMessage] = useState("Connecting signer...");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -63,16 +91,6 @@ function PublishPage() {
   );
   const [folderFiles, setFolderFiles] = useState<File[]>([]);
   const [folderName, setFolderName] = useState("site");
-
-  useEffect(() => {
-    const input = folderInputRef.current;
-    if (!input) {
-      return;
-    }
-
-    input.setAttribute("webkitdirectory", "");
-    input.setAttribute("directory", "");
-  }, []);
 
   async function handleConnectPublisher() {
     setPhase("loading");
@@ -212,12 +230,7 @@ function PublishPage() {
                 <span className="text-sm font-medium text-slate-200">
                   Site folder
                 </span>
-                <input
-                  ref={folderInputRef}
-                  className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-400 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-950"
-                  type="file"
-                  onChange={handleFolderChange}
-                />
+                <DirectoryInput onChange={handleFolderChange} />
               </label>
 
               <div className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3">
