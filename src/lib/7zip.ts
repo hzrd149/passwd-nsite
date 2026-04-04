@@ -44,13 +44,20 @@ function sanitizePath(path: string): string {
 }
 
 function getArchiveTargets(files: SevenZipInputFile[]): string[] {
-  return [...new Set(files.map((file) => sanitizePath(file.path).split("/")[0]).filter(Boolean))];
+  return [
+    ...new Set(
+      files
+        .map((file) => sanitizePath(file.path).split("/")[0])
+        .filter(Boolean),
+    ),
+  ];
 }
 
-function createDirectoryTree(fs: Awaited<ReturnType<typeof SevenZip>>["FS"], path: string) {
-  const segments = sanitizePath(path)
-    .split("/")
-    .filter(Boolean);
+function createDirectoryTree(
+  fs: Awaited<ReturnType<typeof SevenZip>>["FS"],
+  path: string,
+) {
+  const segments = sanitizePath(path).split("/").filter(Boolean);
 
   let currentPath = "";
   for (const segment of segments) {
@@ -62,7 +69,10 @@ function createDirectoryTree(fs: Awaited<ReturnType<typeof SevenZip>>["FS"], pat
         throw new Error(`${currentPath} exists but is not a directory.`);
       }
     } catch (error) {
-      if (error instanceof Error && /exists but is not a directory\.$/.test(error.message)) {
+      if (
+        error instanceof Error &&
+        /exists but is not a directory\.$/.test(error.message)
+      ) {
         throw error;
       }
 
@@ -71,7 +81,10 @@ function createDirectoryTree(fs: Awaited<ReturnType<typeof SevenZip>>["FS"], pat
   }
 }
 
-function parseArchiveEntries(output: string, archiveName: string): SevenZipArchiveEntry[] {
+function parseArchiveEntries(
+  output: string,
+  archiveName: string,
+): SevenZipArchiveEntry[] {
   return output
     .split(/\r?\n\r?\n+/)
     .map((block) => {
@@ -142,7 +155,9 @@ function walkExtractedFiles(
   rootPath: string,
   currentPath = rootPath,
 ): SevenZipExtractedFile[] {
-  const names = fs.readdir(currentPath).filter((name) => name !== "." && name !== "..");
+  const names = fs
+    .readdir(currentPath)
+    .filter((name) => name !== "." && name !== "..");
 
   return names.flatMap((name) => {
     const fullPath = `${currentPath}/${name}`;
@@ -218,7 +233,9 @@ export async function listArchiveEntries(
   archive: File | SevenZipInputFile,
   password = "",
 ): Promise<SevenZipArchiveEntry[]> {
-  const archiveName = normalizeArchiveName(archive instanceof File ? archive.name : archive.path);
+  const archiveName = normalizeArchiveName(
+    archive instanceof File ? archive.name : archive.path,
+  );
   const archiveData = normalizeFileData(
     archive instanceof File ? await archive.arrayBuffer() : archive.data,
   );
@@ -246,7 +263,9 @@ export async function extractArchive(
   archive: File | SevenZipInputFile,
   password = "",
 ): Promise<SevenZipExtractedFile[]> {
-  const archiveName = normalizeArchiveName(archive instanceof File ? archive.name : archive.path);
+  const archiveName = normalizeArchiveName(
+    archive instanceof File ? archive.name : archive.path,
+  );
   const archiveData = normalizeFileData(
     archive instanceof File ? await archive.arrayBuffer() : archive.data,
   );
@@ -299,7 +318,10 @@ export async function createArchive(
 
       const lastSlash = normalizedPath.lastIndexOf("/");
       if (lastSlash >= 0) {
-        createDirectoryTree(sevenZip.FS, `${inputRoot}/${normalizedPath.slice(0, lastSlash)}`);
+        createDirectoryTree(
+          sevenZip.FS,
+          `${inputRoot}/${normalizedPath.slice(0, lastSlash)}`,
+        );
       }
 
       sevenZip.FS.writeFile(
@@ -321,7 +343,8 @@ export async function createArchive(
     try {
       return sevenZip.FS.readFile(internalArchivePath);
     } catch (error) {
-      const readFileMessage = formatThrownError(error) ?? "Unknown read failure";
+      const readFileMessage =
+        formatThrownError(error) ?? "Unknown read failure";
 
       throw getSevenZipError(
         {

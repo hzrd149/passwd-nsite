@@ -28,9 +28,21 @@ const site = {
       "/assets/Orbitron-Regular-CcmLPTI7.ttf",
       "59c2bc6487139f1b8c5754e0cc98ea431ab4c1c1ee142d9d2433ecabe444b59a",
     ],
-    ["path", "/favicon.svg", "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66"],
-    ["path", "/hero.png", "72a860570eddf1dd9988f26c7106c67be286bc9f2fd3303c465ce87edb1ae6cd"],
-    ["path", "/icons.svg", "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a"],
+    [
+      "path",
+      "/favicon.svg",
+      "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66",
+    ],
+    [
+      "path",
+      "/hero.png",
+      "72a860570eddf1dd9988f26c7106c67be286bc9f2fd3303c465ce87edb1ae6cd",
+    ],
+    [
+      "path",
+      "/icons.svg",
+      "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a",
+    ],
     [
       "path",
       "/index.html",
