@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { getContentTypeForPath } from "../lib/mediaTypes";
 import type { SevenZipExtractedFile } from "../lib/7zip";
 import { getRouterClient, unregisterRouterClient } from "../router/client";
@@ -105,24 +105,37 @@ function HomePage() {
     "download" | "unlock" | "lock"
   >("download");
 
-  async function downloadArchive() {
+  const checkForArchive = useCallback(async (): Promise<Uint8Array | null> => {
+    const response = await fetch("/site.7z", { cache: "no-store" });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Archive check failed with status ${response.status}.`);
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    const bytes = new Uint8Array(await response.arrayBuffer());
+
+    if (contentType.includes("text/html") || !isSevenZipArchive(bytes)) {
+      return null;
+    }
+
+    return bytes;
+  }, []);
+
+  const downloadArchive = useCallback(async () => {
     setPhase("downloading");
     setStatusMessage("Preparing the locked site...");
     setErrorMessage(null);
 
     try {
-      const response = await fetch("/site.7z", { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error(`Download failed with status ${response.status}.`);
-      }
-
-      const contentType = response.headers.get("content-type") ?? "";
-      const bytes = new Uint8Array(await response.arrayBuffer());
-
-      if (contentType.includes("text/html") || !isSevenZipArchive(bytes)) {
-        throw new Error(
-          "/site.7z is missing or did not return a valid 7z archive.",
-        );
+      const bytes = await checkForArchive();
+      if (!bytes) {
+        window.location.replace("#/publish");
+        return;
       }
 
       setArchiveBytes(bytes);
@@ -137,36 +150,36 @@ function HomePage() {
           : "Failed to prepare the locked site.",
       );
     }
-  }
-
-  async function syncLockState() {
-    setPhase("checking");
-    setStatusMessage("Checking site lock...");
-    setErrorMessage(null);
-
-    try {
-      const mode = await getStoredMode();
-
-      if (mode === "on") {
-        setPhase("unlocked");
-        return;
-      }
-
-      await downloadArchive();
-    } catch (error) {
-      setRetryAction("download");
-      setPhase("error");
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Failed to check the site lock.",
-      );
-    }
-  }
+  }, [checkForArchive]);
 
   useEffect(() => {
+    async function syncLockState() {
+      setPhase("checking");
+      setStatusMessage("Checking site lock...");
+      setErrorMessage(null);
+
+      try {
+        const mode = await getStoredMode();
+
+        if (mode === "on") {
+          setPhase("unlocked");
+          return;
+        }
+
+        await downloadArchive();
+      } catch (error) {
+        setRetryAction("download");
+        setPhase("error");
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Failed to check the site lock.",
+        );
+      }
+    }
+
     void syncLockState();
-  }, []);
+  }, [downloadArchive]);
 
   async function handleUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -298,6 +311,12 @@ function HomePage() {
                 Unlock site
               </button>
             </form>
+
+            <div className="text-sm text-slate-400">
+              <a className="transition hover:text-cyan-200" href="#/publish">
+                Publish a new site instead
+              </a>
+            </div>
           </div>
         ) : null}
 
@@ -324,6 +343,12 @@ function HomePage() {
             >
               Lock site
             </button>
+
+            <div className="text-sm text-slate-400">
+              <a className="transition hover:text-cyan-200" href="#/publish">
+                Open publish view
+              </a>
+            </div>
           </div>
         ) : null}
 

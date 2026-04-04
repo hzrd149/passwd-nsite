@@ -15,7 +15,7 @@ type MetaValue = {
 export function normalizeRouterPath(path: string): string {
   const normalizedPath = path.split(/[?#]/, 1)[0]?.trim() ?? "/";
   const parts = normalizedPath.split("/").filter(Boolean);
-  return `/${parts.join("/")}` || "/";
+  return parts.length === 0 ? "/" : `/${parts.join("/")}`;
 }
 
 function hasFileExtension(path: string): boolean {

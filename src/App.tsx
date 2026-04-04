@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
 import HomePage from "./pages/HomePage";
 import DebugPage from "./pages/DebugPage";
+import PublishPage from "./pages/PublishPage";
 
-type AppRoute = "home" | "debug";
+type AppRoute = "home" | "publish" | "debug";
 
 function getRouteFromHash(hash: string): AppRoute {
-  return hash === "#/debug" ? "debug" : "home";
+  if (hash === "#/debug") {
+    return "debug";
+  }
+
+  if (hash === "#/publish") {
+    return "publish";
+  }
+
+  return "home";
 }
 
 function App() {
@@ -26,7 +35,13 @@ function App() {
 
   return (
     <main className="min-h-screen">
-      {route === "debug" ? <DebugPage /> : <HomePage />}
+      {route === "debug" ? (
+        <DebugPage />
+      ) : route === "publish" ? (
+        <PublishPage />
+      ) : (
+        <HomePage />
+      )}
     </main>
   );
 }

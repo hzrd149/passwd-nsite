@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "7z-wasm": "^1.2.0",
+    "@libs/qrcode": "jsr:^3.0.1",
     "@std/media-types": "jsr:^1.1.0",
+    "nostr-tools": "^2.23.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },

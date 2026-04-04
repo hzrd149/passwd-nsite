@@ -22,7 +22,7 @@ function createRequestId(): string {
 class RouterClient {
   private readonly pendingRequests = new Map<
     string,
-    { resolve: (value: any) => void; reject: (reason?: unknown) => void }
+    { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }
   >();
 
   private readonly listeners = new Set<RouterMessageListener>();
@@ -75,7 +75,10 @@ class RouterClient {
     >;
 
     return new Promise<RouterRequestMap[TType]>((resolve, reject) => {
-      this.pendingRequests.set(id, { resolve, reject });
+      this.pendingRequests.set(id, {
+        resolve: resolve as (value: unknown) => void,
+        reject,
+      });
       target.postMessage(request);
     });
   }

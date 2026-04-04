@@ -10,9 +10,15 @@ importers:
       7z-wasm:
         specifier: ^1.2.0
         version: 1.2.0
+      "@libs/qrcode":
+        specifier: jsr:^3.0.1
+        version: "@jsr/libs__qrcode@3.0.1"
       "@std/media-types":
         specifier: jsr:^1.1.0
         version: "@jsr/std__media-types@1.1.0"
+      nostr-tools:
+        specifier: ^2.23.3
+        version: 2.23.3(typescript@5.9.3)
       react:
         specifier: ^19.2.4
         version: 19.2.4
@@ -332,6 +338,13 @@ packages:
         integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==,
       }
 
+  "@jsr/libs__qrcode@3.0.1":
+    resolution:
+      {
+        integrity: sha512-kmB/aAUr55cB4h5+UHmig9Cx8UWEckpEBYdgmKIP1qaEZU3EpLQZHs4GL/78c+WVAdC9H6Gx+JwjX3g6GvsB2Q==,
+        tarball: https://npm.jsr.io/~/11/@jsr/libs__qrcode/3.0.1.tgz,
+      }
+
   "@jsr/std__media-types@1.1.0":
     resolution:
       {
@@ -347,6 +360,27 @@ packages:
     peerDependencies:
       "@emnapi/core": ^1.7.1
       "@emnapi/runtime": ^1.7.1
+
+  "@noble/ciphers@2.1.1":
+    resolution:
+      {
+        integrity: sha512-bysYuiVfhxNJuldNXlFEitTVdNnYUc+XNJZd7Qm2a5j1vZHgY+fazadNFWFaMK/2vye0JVlxV3gHmC0WDfAOQw==,
+      }
+    engines: { node: ">= 20.19.0" }
+
+  "@noble/curves@2.0.1":
+    resolution:
+      {
+        integrity: sha512-vs1Az2OOTBiP4q0pwjW5aF0xp9n4MxVrmkFBxc6EKZc6ddYx5gaZiAsZoq0uRRXWbi3AT/sBqn05eRPtn1JCPw==,
+      }
+    engines: { node: ">= 20.19.0" }
+
+  "@noble/hashes@2.0.1":
+    resolution:
+      {
+        integrity: sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw==,
+      }
+    engines: { node: ">= 20.19.0" }
 
   "@oxc-project/types@0.122.0":
     resolution:
@@ -498,6 +532,24 @@ packages:
     resolution:
       {
         integrity: sha512-qujRfC8sFVInYSPPMLQByRh7zhwkGFS4+tyMQ83srV1qrxL4g8E2tyxVVyxd0+8QeBM1mIk9KbWxkegRr76XzA==,
+      }
+
+  "@scure/base@2.0.0":
+    resolution:
+      {
+        integrity: sha512-3E1kpuZginKkek01ovG8krQ0Z44E3DHPjc5S2rjJw9lZn3KSQOs8S7wqikF/AH7iRanHypj85uGyxk0XAyC37w==,
+      }
+
+  "@scure/bip32@2.0.1":
+    resolution:
+      {
+        integrity: sha512-4Md1NI5BzoVP+bhyJaY3K6yMesEFzNS1sE/cP+9nuvE7p/b0kx9XbpDHHFl8dHtufcbdHRUUQdRqLIPHN/s7yA==,
+      }
+
+  "@scure/bip39@2.0.1":
+    resolution:
+      {
+        integrity: sha512-PsxdFj/d2AcJcZDX1FXN3dDgitDDTmwf78rKZq1a6c1P1Nan1X/Sxc7667zU3U+AN60g7SxxP0YCVw2H/hBycg==,
       }
 
   "@tailwindcss/node@4.2.2":
@@ -1461,6 +1513,23 @@ packages:
         integrity: sha512-1h5gKZCF+pO/o3Iqt5Jp7wc9rH3eJJ0+nh/CIoiRwjRxde/hAHyLPXYN4V3CqKAbiZPSeJFSWHmJsbkicta0Eg==,
       }
 
+  nostr-tools@2.23.3:
+    resolution:
+      {
+        integrity: sha512-AALyt9k8xPdF4UV2mlLJ2mgCn4kpTB0DZ8t2r6wjdUh6anfx2cTVBsHUlo9U0EY/cKC5wcNyiMAmRJV5OVEalA==,
+      }
+    peerDependencies:
+      typescript: ">=5.0.0"
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  nostr-wasm@0.1.0:
+    resolution:
+      {
+        integrity: sha512-78BTryCLcLYv96ONU8Ws3Q1JzjlAt+43pWQhIl86xZmWeegYCNLPml7yQ+gG3vR6V5h4XGj+TxO+SS5dsThQIA==,
+      }
+
   optionator@0.9.4:
     resolution:
       {
@@ -2005,6 +2074,8 @@ snapshots:
       "@jridgewell/resolve-uri": 3.1.2
       "@jridgewell/sourcemap-codec": 1.5.5
 
+  "@jsr/libs__qrcode@3.0.1": {}
+
   "@jsr/std__media-types@1.1.0": {}
 
   "@napi-rs/wasm-runtime@1.1.2(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)":
@@ -2013,6 +2084,14 @@ snapshots:
       "@emnapi/runtime": 1.9.2
       "@tybys/wasm-util": 0.10.1
     optional: true
+
+  "@noble/ciphers@2.1.1": {}
+
+  "@noble/curves@2.0.1":
+    dependencies:
+      "@noble/hashes": 2.0.1
+
+  "@noble/hashes@2.0.1": {}
 
   "@oxc-project/types@0.122.0": {}
 
@@ -2069,6 +2148,19 @@ snapshots:
   "@rolldown/pluginutils@1.0.0-rc.12": {}
 
   "@rolldown/pluginutils@1.0.0-rc.7": {}
+
+  "@scure/base@2.0.0": {}
+
+  "@scure/bip32@2.0.1":
+    dependencies:
+      "@noble/curves": 2.0.1
+      "@noble/hashes": 2.0.1
+      "@scure/base": 2.0.0
+
+  "@scure/bip39@2.0.1":
+    dependencies:
+      "@noble/hashes": 2.0.1
+      "@scure/base": 2.0.0
 
   "@tailwindcss/node@4.2.2":
     dependencies:
@@ -2601,6 +2693,20 @@ snapshots:
   natural-compare@1.4.0: {}
 
   node-releases@2.0.37: {}
+
+  nostr-tools@2.23.3(typescript@5.9.3):
+    dependencies:
+      "@noble/ciphers": 2.1.1
+      "@noble/curves": 2.0.1
+      "@noble/hashes": 2.0.1
+      "@scure/base": 2.0.0
+      "@scure/bip32": 2.0.1
+      "@scure/bip39": 2.0.1
+      nostr-wasm: 0.1.0
+    optionalDependencies:
+      typescript: 5.9.3
+
+  nostr-wasm@0.1.0: {}
 
   optionator@0.9.4:
     dependencies:
