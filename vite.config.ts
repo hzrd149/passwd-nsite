@@ -13,4 +13,8 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // Dont minify, we want others to be able to inspect and modify
+    minify: false,
+  },
 });

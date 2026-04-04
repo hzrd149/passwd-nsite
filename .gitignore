@@ -26,3 +26,4 @@ dist-ssr
 # Dev site
 public/site.7z
 public/site
+dev/*.7z

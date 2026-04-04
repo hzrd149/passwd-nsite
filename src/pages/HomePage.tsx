@@ -1,58 +1,27 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { extractArchive, type SevenZipExtractedFile } from "../lib/7zip";
-import { getRouterClient } from "../router/client";
+import { getContentTypeForPath } from "../lib/mediaTypes";
+import type { SevenZipExtractedFile } from "../lib/7zip";
+import { getRouterClient, unregisterRouterClient } from "../router/client";
 import type { RouterFileRecord } from "../router/protocol";
+import {
+  deleteRouterDatabase,
+  getStoredMode,
+  putStoredFiles,
+} from "../router/storage";
 
-type InstallerPhase =
+type HomePhase =
+  | "checking"
   | "downloading"
-  | "download_error"
-  | "awaiting_password"
-  | "installing"
-  | "install_error";
+  | "locked"
+  | "unlocking"
+  | "unlocked"
+  | "error"
+  | "locking";
 
 const SEVEN_ZIP_SIGNATURE = [0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c] as const;
 
 function isSevenZipArchive(bytes: Uint8Array): boolean {
   return SEVEN_ZIP_SIGNATURE.every((byte, index) => bytes[index] === byte);
-}
-
-function inferMimeType(path: string): string {
-  const extension = path.split(".").pop()?.toLowerCase() ?? "";
-
-  switch (extension) {
-    case "html":
-      return "text/html; charset=utf-8";
-    case "css":
-      return "text/css; charset=utf-8";
-    case "js":
-    case "mjs":
-      return "text/javascript; charset=utf-8";
-    case "json":
-      return "application/json; charset=utf-8";
-    case "svg":
-      return "image/svg+xml";
-    case "png":
-      return "image/png";
-    case "jpg":
-    case "jpeg":
-      return "image/jpeg";
-    case "webp":
-      return "image/webp";
-    case "gif":
-      return "image/gif";
-    case "ico":
-      return "image/x-icon";
-    case "txt":
-      return "text/plain; charset=utf-8";
-    case "woff":
-      return "font/woff";
-    case "woff2":
-      return "font/woff2";
-    case "ttf":
-      return "font/ttf";
-    default:
-      return "application/octet-stream";
-  }
 }
 
 function getSavedFiles(files: SevenZipExtractedFile[]) {
@@ -96,7 +65,7 @@ function buildRouterFiles(files: SevenZipExtractedFile[]): RouterFileRecord[] {
 
   return savedFiles.map((file, index) => {
     const path = normalizedPaths[index];
-    const mime = inferMimeType(path);
+    const mime = getContentTypeForPath(path);
     const blob = new Blob([new Uint8Array(file.data).slice().buffer], {
       type: mime,
     });
@@ -118,22 +87,27 @@ function LoadingView({ title, message }: { title: string; message: string }) {
         <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
           {title}
         </h1>
-        <p className="text-sm leading-6 text-slate-400 sm:text-base">{message}</p>
+        <p className="text-sm leading-6 text-slate-400 sm:text-base">
+          {message}
+        </p>
       </div>
     </div>
   );
 }
 
 function HomePage() {
-  const [phase, setPhase] = useState<InstallerPhase>("downloading");
-  const [statusMessage, setStatusMessage] = useState("Downloading site bundle...");
+  const [phase, setPhase] = useState<HomePhase>("checking");
+  const [statusMessage, setStatusMessage] = useState("Checking site lock... ");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [archiveBytes, setArchiveBytes] = useState<Uint8Array | null>(null);
+  const [retryAction, setRetryAction] = useState<
+    "download" | "unlock" | "lock"
+  >("download");
 
   async function downloadArchive() {
     setPhase("downloading");
-    setStatusMessage("Downloading site bundle...");
+    setStatusMessage("Preparing the locked site...");
     setErrorMessage(null);
 
     try {
@@ -146,68 +120,140 @@ function HomePage() {
       const bytes = new Uint8Array(await response.arrayBuffer());
 
       if (contentType.includes("text/html") || !isSevenZipArchive(bytes)) {
-        throw new Error("/site.7z is missing or did not return a valid 7z archive.");
+        throw new Error(
+          "/site.7z is missing or did not return a valid 7z archive.",
+        );
       }
 
       setArchiveBytes(bytes);
-      setPhase("awaiting_password");
-      setStatusMessage("Archive ready.");
+      setPhase("locked");
+      setStatusMessage("The locked site is ready.");
     } catch (error) {
-      setPhase("download_error");
+      setRetryAction("download");
+      setPhase("error");
       setErrorMessage(
-        error instanceof Error ? error.message : "Failed to download /site.7z.",
+        error instanceof Error
+          ? error.message
+          : "Failed to prepare the locked site.",
+      );
+    }
+  }
+
+  async function syncLockState() {
+    setPhase("checking");
+    setStatusMessage("Checking site lock...");
+    setErrorMessage(null);
+
+    try {
+      const mode = await getStoredMode();
+
+      if (mode === "on") {
+        setPhase("unlocked");
+        return;
+      }
+
+      await downloadArchive();
+    } catch (error) {
+      setRetryAction("download");
+      setPhase("error");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to check the site lock.",
       );
     }
   }
 
   useEffect(() => {
-    void downloadArchive();
+    void syncLockState();
   }, []);
 
-  async function handleInstall(event: FormEvent<HTMLFormElement>) {
+  async function handleUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!archiveBytes) {
-      setPhase("download_error");
-      setErrorMessage("The site bundle is not available yet. Retry the download.");
+      setRetryAction("download");
+      setPhase("error");
+      setErrorMessage("The locked site bundle is not available yet.");
       return;
     }
 
-    setPhase("installing");
+    setPhase("unlocking");
     setErrorMessage(null);
 
     try {
-      setStatusMessage("Decrypting archive...");
+      setStatusMessage("Unlocking archive...");
+      const { extractArchive } = await import("../lib/7zip");
       const extractedFiles = await extractArchive(
         { path: "site.7z", data: archiveBytes },
         password,
       );
 
-      setStatusMessage("Preparing files...");
+      setStatusMessage("Loading site files...");
       const routerFiles = buildRouterFiles(extractedFiles);
       if (routerFiles.length === 0) {
-        throw new Error("The archive did not contain any files to install.");
+        throw new Error("The locked site bundle did not contain any files.");
       }
 
+      await deleteRouterDatabase();
+      await putStoredFiles(routerFiles);
+
+      setStatusMessage("Enabling site...");
       const client = await getRouterClient();
-
-      setStatusMessage("Clearing local router storage...");
-      await client.clearFiles();
-
-      setStatusMessage("Saving site files...");
-      await client.putFiles(routerFiles);
-
-      setStatusMessage("Enabling router...");
       await client.setMode("on");
 
-      setStatusMessage("Reloading site...");
+      setStatusMessage("Opening site...");
       window.location.assign("/");
     } catch (error) {
-      setPhase("install_error");
+      setRetryAction("unlock");
+      setPhase("error");
       setErrorMessage(
-        error instanceof Error ? error.message : "Failed to install the site bundle.",
+        error instanceof Error ? error.message : "Failed to unlock the site.",
       );
     }
+  }
+
+  async function handleLock() {
+    setPhase("locking");
+    setStatusMessage("Disabling site access...");
+    setErrorMessage(null);
+
+    try {
+      const mode = await getStoredMode();
+      if (mode === "on") {
+        const client = await getRouterClient();
+        await client.setMode("fallback");
+      }
+
+      setStatusMessage("Removing site access...");
+      await unregisterRouterClient();
+
+      setStatusMessage("Removing stored site data...");
+      await deleteRouterDatabase();
+
+      setStatusMessage("Resetting locked site...");
+      window.location.assign("/");
+    } catch (error) {
+      setRetryAction("lock");
+      setPhase("error");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to lock the site.",
+      );
+    }
+  }
+
+  function handleRetry() {
+    if (retryAction === "lock") {
+      void handleLock();
+      return;
+    }
+
+    if (retryAction === "unlock") {
+      setPhase("locked");
+      return;
+    }
+
+    void downloadArchive();
   }
 
   return (
@@ -219,22 +265,22 @@ function HomePage() {
           </p>
         </div>
 
-        {phase === "downloading" ? (
-          <LoadingView title="Preparing site" message={statusMessage} />
+        {phase === "checking" || phase === "downloading" ? (
+          <LoadingView title="Site is locked" message={statusMessage} />
         ) : null}
 
-        {phase === "awaiting_password" ? (
+        {phase === "locked" ? (
           <div className="space-y-8 text-center">
             <div className="space-y-3">
               <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                Unlock site bundle
+                Unlock site
               </h1>
               <p className="text-sm leading-6 text-slate-400 sm:text-base">
-                Enter the archive password to install the site and enable the router.
+                Enter the password to unlock the site and open it.
               </p>
             </div>
 
-            <form className="space-y-4" onSubmit={handleInstall}>
+            <form className="space-y-4" onSubmit={handleUnlock}>
               <input
                 className="min-h-14 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-5 text-center text-lg text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
                 type="password"
@@ -249,50 +295,61 @@ function HomePage() {
                 type="submit"
                 disabled={!password}
               >
-                Install site
+                Unlock site
               </button>
             </form>
           </div>
         ) : null}
 
-        {phase === "installing" ? (
-          <LoadingView title="Installing site" message={statusMessage} />
+        {phase === "unlocking" ? (
+          <LoadingView title="Unlocking site" message={statusMessage} />
         ) : null}
 
-        {phase === "download_error" || phase === "install_error" ? (
+        {phase === "unlocked" ? (
           <div className="space-y-8 text-center">
             <div className="space-y-3">
               <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                Setup paused
+                Site is unlocked
               </h1>
               <p className="text-sm leading-6 text-slate-400 sm:text-base">
-                {errorMessage ?? "Something went wrong while preparing the site."}
+                Locking the site removes the service worker and deletes every
+                stored site file.
               </p>
             </div>
 
+            <button
+              className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
+              type="button"
+              onClick={handleLock}
+            >
+              Lock site
+            </button>
+          </div>
+        ) : null}
+
+        {phase === "locking" ? (
+          <LoadingView title="Locking site" message={statusMessage} />
+        ) : null}
+
+        {phase === "error" ? (
+          <div className="space-y-8 text-center">
             <div className="space-y-3">
-              <button
-                className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
-                type="button"
-                onClick={() => {
-                  if (phase === "download_error") {
-                    void downloadArchive();
-                    return;
-                  }
-
-                  setPhase("awaiting_password");
-                }}
-              >
-                {phase === "download_error" ? "Retry download" : "Try again"}
-              </button>
-
-              <a
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-medium text-slate-300 transition hover:border-white/20 hover:text-white"
-                href="#/debug"
-              >
-                Open debug view
-              </a>
+              <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                Site needs attention
+              </h1>
+              <p className="text-sm leading-6 text-slate-400 sm:text-base">
+                {errorMessage ??
+                  "Something went wrong while changing the site lock."}
+              </p>
             </div>
+
+            <button
+              className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
+              type="button"
+              onClick={handleRetry}
+            >
+              {retryAction === "lock" ? "Try locking again" : "Try again"}
+            </button>
           </div>
         ) : null}
       </section>

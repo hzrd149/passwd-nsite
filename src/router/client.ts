@@ -1,7 +1,5 @@
 import type {
   RouterEvent,
-  RouterFileInfo,
-  RouterFileRecord,
   RouterMode,
   RouterRequest,
   RouterState,
@@ -13,11 +11,6 @@ type RouterRequestMap = {
   connect: void;
   getStatus: RouterState;
   setMode: RouterState;
-  putFiles: { fileCount: number };
-  deleteFiles: { fileCount: number };
-  clearFiles: { fileCount: number };
-  getFile: RouterFileRecord | null;
-  listFiles: RouterFileInfo[];
 };
 
 type RouterMessageListener = (event: RouterStreamEvent) => void;
@@ -95,24 +88,9 @@ class RouterClient {
     return this.request("setMode", { mode });
   }
 
-  putFiles(files: RouterFileRecord[]) {
-    return this.request("putFiles", { files });
-  }
-
-  deleteFiles(paths: string[]) {
-    return this.request("deleteFiles", { paths });
-  }
-
-  clearFiles() {
-    return this.request("clearFiles");
-  }
-
-  listFiles() {
-    return this.request("listFiles");
-  }
-
-  getFile(path: string) {
-    return this.request("getFile", { path });
+  async unregister() {
+    await this.registration?.unregister();
+    this.registration = null;
   }
 
   private readonly handleMessage = (event: MessageEvent<RouterEvent>) => {
@@ -155,4 +133,20 @@ export function getRouterClient(): Promise<RouterClient> {
 
   routerClientPromise ??= new RouterClient().init();
   return routerClientPromise;
+}
+
+export async function unregisterRouterClient(): Promise<void> {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  if (routerClientPromise) {
+    const client = await routerClientPromise.catch(() => null);
+    await client?.unregister();
+    routerClientPromise = null;
+    return;
+  }
+
+  const registration = await navigator.serviceWorker.getRegistration("/");
+  await registration?.unregister();
 }

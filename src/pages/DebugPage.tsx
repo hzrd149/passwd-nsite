@@ -5,12 +5,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import {
-  createEncryptedArchive,
-  listArchiveEntries,
-  type SevenZipArchiveEntry,
-  type SevenZipInputFile,
-} from "../lib/7zip";
+import type { SevenZipArchiveEntry, SevenZipInputFile } from "../lib/7zip";
 
 function inferFolderName(files: FileList | null): string {
   const firstPath = files?.[0]?.webkitRelativePath;
@@ -79,7 +74,11 @@ function DebugPage() {
     setEntries([]);
 
     try {
-      const nextEntries = await listArchiveEntries(selectedFile, inspectPassword);
+      const { listArchiveEntries } = await import("../lib/7zip");
+      const nextEntries = await listArchiveEntries(
+        selectedFile,
+        inspectPassword,
+      );
       setEntries(nextEntries);
     } catch (caughtError) {
       setInspectError(
@@ -123,6 +122,7 @@ function DebugPage() {
     setCreateSuccess(null);
 
     try {
+      const { createEncryptedArchive } = await import("../lib/7zip");
       const files: SevenZipInputFile[] = await Promise.all(
         folderFiles.map(async (file) => ({
           path: file.webkitRelativePath || file.name,
@@ -162,7 +162,8 @@ function DebugPage() {
               7z inspection and archive creation sandbox.
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300">
-              This stays out of the main install screen so experimental archive work does not clutter the operational flow.
+              This stays out of the main install screen so experimental archive
+              work does not clutter the operational flow.
             </p>
           </div>
 
@@ -187,12 +188,18 @@ function DebugPage() {
             Read archive contents
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-300">
-            Choose a <code className="rounded bg-white/10 px-2 py-1 text-slate-100">.7z</code> file and list every reported entry.
+            Choose a{" "}
+            <code className="rounded bg-white/10 px-2 py-1 text-slate-100">
+              .7z
+            </code>{" "}
+            file and list every reported entry.
           </p>
 
           <div className="mt-6 grid gap-4">
             <label className="grid gap-2 text-left">
-              <span className="text-sm font-medium text-slate-200">Archive</span>
+              <span className="text-sm font-medium text-slate-200">
+                Archive
+              </span>
               <input
                 className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-violet-400 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-950"
                 type="file"
@@ -206,7 +213,9 @@ function DebugPage() {
             </label>
 
             <label className="grid gap-2 text-left">
-              <span className="text-sm font-medium text-slate-200">Password</span>
+              <span className="text-sm font-medium text-slate-200">
+                Password
+              </span>
               <input
                 className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60"
                 type="password"
@@ -244,7 +253,8 @@ function DebugPage() {
             Build encrypted archive
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-300">
-            Pick a folder, name the output, and generate a new encrypted site bundle in the browser.
+            Pick a folder, name the output, and generate a new encrypted site
+            bundle in the browser.
           </p>
 
           <div className="mt-6 grid gap-4">
@@ -259,7 +269,9 @@ function DebugPage() {
             </label>
 
             <label className="grid gap-2 text-left">
-              <span className="text-sm font-medium text-slate-200">Archive name</span>
+              <span className="text-sm font-medium text-slate-200">
+                Archive name
+              </span>
               <input
                 className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60"
                 type="text"
@@ -270,7 +282,9 @@ function DebugPage() {
             </label>
 
             <label className="grid gap-2 text-left">
-              <span className="text-sm font-medium text-slate-200">Password</span>
+              <span className="text-sm font-medium text-slate-200">
+                Password
+              </span>
               <input
                 className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-violet-400/60"
                 type="password"
@@ -316,13 +330,16 @@ function DebugPage() {
               </p>
             </div>
             <div className="text-sm text-slate-400">
-              {selectedFile ? `Selected: ${selectedFile.name}` : "No archive selected"}
+              {selectedFile
+                ? `Selected: ${selectedFile.name}`
+                : "No archive selected"}
             </div>
           </div>
 
           {entries.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-5 text-sm text-slate-400">
-              Select an archive, enter its password if needed, and list its contents.
+              Select an archive, enter its password if needed, and list its
+              contents.
             </div>
           ) : (
             <ol className="grid gap-2">
@@ -362,12 +379,20 @@ function DebugPage() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Output name</p>
-              <p className="mt-1 text-sm font-medium text-slate-100">{archiveName || "archive.7z"}</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+                Output name
+              </p>
+              <p className="mt-1 text-sm font-medium text-slate-100">
+                {archiveName || "archive.7z"}
+              </p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Source files</p>
-              <p className="mt-1 text-sm font-medium text-slate-100">{folderFiles.length}</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+                Source files
+              </p>
+              <p className="mt-1 text-sm font-medium text-slate-100">
+                {folderFiles.length}
+              </p>
             </div>
           </div>
         </div>
