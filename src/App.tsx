@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import "./App.css";
 import HomePage from "./pages/HomePage";
 import DebugPage from "./pages/DebugPage";
 
@@ -30,35 +29,16 @@ function App() {
   }, []);
 
   return (
-    <main className="app-shell">
-      <section className="panel intro-panel shell-header">
-        <div className="section-copy">
-          <p className="eyebrow">passwd nsite</p>
-          <h1>Configure the site router and inspect archive tooling</h1>
-          <p className="lede">
-            The home view is the operational control surface for the service
-            worker router. The debug view keeps the 7z test tools out of the
-            main workflow.
-          </p>
-        </div>
-
-        <nav className="route-nav" aria-label="Primary">
-          <a
-            className={`route-link${route === "home" ? " is-active" : ""}`}
-            href={getRouteHref("home")}
-          >
-            Home
-          </a>
-          <a
-            className={`route-link${route === "debug" ? " is-active" : ""}`}
-            href={getRouteHref("debug")}
-          >
-            Debug
-          </a>
-        </nav>
-      </section>
-
+    <main className="min-h-screen">
       {route === "debug" ? <DebugPage /> : <HomePage />}
+      {route !== "debug" ? (
+        <a
+          className="fixed right-4 bottom-4 z-10 rounded-full border border-white/15 bg-slate-950/80 px-4 py-2 text-sm font-medium text-slate-200 shadow-lg shadow-slate-950/30 backdrop-blur transition hover:border-cyan-400/40 hover:text-white"
+          href={getRouteHref("debug")}
+        >
+          Open debug view
+        </a>
+      ) : null}
     </main>
   );
 }
