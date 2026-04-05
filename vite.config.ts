@@ -138,5 +138,12 @@ export default defineConfig({
     emptyOutDir: true,
     // Dont minify, we want others to be able to inspect and modify
     minify: false,
+    rollupOptions: {
+      output: {
+        entryFileNames: "assets/[name].js",
+        chunkFileNames: "assets/[name].js",
+        assetFileNames: "assets/[name][extname]",
+      },
+    },
   },
 });
