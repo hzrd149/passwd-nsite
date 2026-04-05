@@ -1,10 +1,10 @@
 {
   "name": "@hzrd149/passwd-nsite",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "exports": "./mod.ts",
   "tasks": {
-    "publish": "deno run -A cli.ts publish"
+    "publish": "deno run --allow-read --allow-write --allow-net cli.ts publish"
   },
   "exclude": [
     ".nsite",

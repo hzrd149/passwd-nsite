@@ -221,18 +221,16 @@ Each blob upload is:
 
 This section is for users and agents that want to reproduce the web publish flow from the command line.
 
-This repository now includes a Deno CLI entrypoint at `cli.ts`.
-
-The package root entry is `mod.ts`, so a published JSR package can be run as:
+Agents should run the published JSR package directly and should not need to clone this repository:
 
 ```bash
-deno run -A jsr:@your-scope/passwd-nsite publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
+deno run --allow-read --allow-net jsr:@hzrd149/passwd-nsite publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
 ```
 
-Run it directly:
+This repository also includes local entrypoints for development only:
 
 ```bash
-deno run -A mod.ts publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
+deno run --allow-read --allow-net mod.ts publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
 ```
 
 Or through the task in `deno.json`:
@@ -251,7 +249,20 @@ For agent use, every publishing input must be provided explicitly on the command
 
 Optional metadata can still be provided with `--title` and `--description`.
 
+Recommended agent flow:
+
+1. Build the static site that should become the locked nsite.
+2. Call `deno run --allow-read --allow-net jsr:@hzrd149/passwd-nsite publish ...` with explicit flags.
+3. Capture the JSON result and surface the event id, aggregate hash, relays, and servers.
+
 The exact signer and Blossom tooling may vary, but the required steps do not.
+
+Runtime permissions:
+
+- `--allow-read` is required to read the site directory and build output.
+- `--allow-net` is required to upload to Blossom servers and publish to relays.
+- `--allow-write` is only required when using `--out` to write `site.7z` to disk.
+- The bundled `deno task publish` task includes `--allow-write` so `--out` works without changing the task definition.
 
 ### 1. Build The Locked Shell
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run -A
+#!/usr/bin/env -S deno run --allow-read --allow-write --allow-net
 
 import { uploadPublishBundle } from "./src/lib/blossom.ts";
 import { buildSignedSiteManifest } from "./src/lib/publish.ts";
@@ -35,13 +35,12 @@ export function printUsage(): void {
   console.log(`passwd-nsite Deno CLI
 
 Usage:
-  deno run -A cli.ts publish <siteDir> [options]
+  deno run --allow-read --allow-net jsr:@hzrd149/passwd-nsite publish <siteDir> [options]
 
 Examples:
-  deno run -A mod.ts publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
-  deno task publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
-  deno run -A jsr:@your-scope/passwd-nsite publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
-  printf '%s' YOUR_PASSWORD | deno run -A mod.ts publish ./my-site --site-id mysite --password-stdin --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
+  deno run --allow-read --allow-net jsr:@hzrd149/passwd-nsite publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
+  printf '%s' YOUR_PASSWORD | deno run --allow-read --allow-net jsr:@hzrd149/passwd-nsite publish ./my-site --site-id mysite --password-stdin --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
+  deno run --allow-read --allow-write --allow-net jsr:@hzrd149/passwd-nsite publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com --out ./site.7z
 
 Options:
   --dist <dir>            Build output directory (default: dist)
@@ -56,6 +55,10 @@ Options:
   --out <path>            Write the generated site.7z to disk
   --dry-run               Build and sign without uploading or publishing
   --help                  Show this help
+
+Permissions:
+  Add --allow-write when using --out.
+  The bundled shebang already includes --allow-write so executable use supports --out.
 `);
 }
 
@@ -319,7 +322,7 @@ export async function runCli(args: string[] = Deno.args): Promise<void> {
     case "publish":
       if (!siteDir) {
         throw new Error(
-          "Usage: deno run -A cli.ts publish <siteDir> [options]",
+          "Usage: deno run --allow-read --allow-net jsr:@hzrd149/passwd-nsite publish <siteDir> [options]",
         );
       }
       await handlePublish(siteDir, options);
