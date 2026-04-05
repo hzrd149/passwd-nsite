@@ -1,11 +1,23 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import { nip19 } from "nostr-tools";
+import { qrcode } from "@libs/qrcode";
 
 import {
+  createExtensionPublishSigner,
+  createRemotePublishSignerSession,
+  DEFAULT_REMOTE_SIGNER_RELAY,
   loadPublishProfile,
+  normalizePublishSignerRelayInput,
   publishEventToRelays,
-  signNostrEvent,
   type PublishProfile,
+  type PublishSigner,
 } from "../lib/nostr";
 import {
   buildArchiveInputs,
@@ -16,7 +28,13 @@ import {
   uploadPublishBundle,
 } from "../lib/publish";
 
-type PublishPhase = "connect" | "loading" | "ready" | "publishing" | "success";
+type PublishPhase =
+  | "connect"
+  | "remote-connect"
+  | "loading"
+  | "ready"
+  | "publishing"
+  | "success";
 
 type PublishResult = {
   eventId: string;
@@ -30,7 +48,14 @@ type PublishResult = {
   failedRelays: Array<{ relay: string; error: string }>;
 };
 
+type CurrentNamedSiteHost = {
+  gatewaySuffix: string;
+  pubkeyB36: string;
+  siteId: string;
+};
+
 const SEVEN_ZIP_SIGNATURE = [0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c] as const;
+const REMOTE_SESSION_DURATION_MS = 10 * 60 * 1000;
 
 function logPublishError(context: string, error: unknown) {
   console.error(context, error);
@@ -91,6 +116,30 @@ function getCurrentGatewaySuffix(hostname: string): string | null {
   }
 
   return labels.slice(1).join(".");
+}
+
+function parseCurrentNamedSiteHost(
+  hostname: string,
+): CurrentNamedSiteHost | null {
+  const labels = hostname.toLowerCase().split(".").filter(Boolean);
+  const leftMostLabel = labels[0];
+
+  if (!leftMostLabel || labels.length < 2) {
+    return null;
+  }
+
+  if (
+    !/^[0-9a-z]{50}[a-z0-9-]{1,13}$/.test(leftMostLabel) ||
+    leftMostLabel.endsWith("-")
+  ) {
+    return null;
+  }
+
+  return {
+    gatewaySuffix: labels.slice(1).join("."),
+    pubkeyB36: leftMostLabel.slice(0, 50),
+    siteId: leftMostLabel.slice(50),
+  };
 }
 
 function buildNamedSiteUrl(result: PublishResult, baseUrl: URL): string {
@@ -154,13 +203,150 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 
+function QrCodePanel({ value }: { value: string }) {
+  const svg = qrcode(value, {
+    output: "svg",
+    border: 4,
+  });
+
+  return (
+    <div className="rounded-[28px] border border-white/10 bg-slate-950/80 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+      <div
+        className="overflow-hidden rounded-2xl bg-slate-950 [&_svg]:h-auto [&_svg]:w-full"
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    </div>
+  );
+}
+
+function RemoteSignerConnectView({
+  connectionUri,
+  errorMessage,
+  relayValue,
+  relayError,
+  onRelayChange,
+  onRelaySet,
+  onBack,
+}: {
+  connectionUri: string | null;
+  errorMessage: string | null;
+  relayValue: string;
+  relayError: string | null;
+  onRelayChange: (value: string) => void;
+  onRelaySet: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="space-y-8">
+      <div className="space-y-3 text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-300/85">
+          Remote signer
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          Connect publish signer
+        </h1>
+        <p className="text-sm leading-6 text-slate-400 sm:text-base">
+          Open this request in your signer app and approve a temporary
+          `passwd-nsite` session for publishing.
+        </p>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] sm:items-center">
+        <div className="order-2 sm:order-1">
+          {connectionUri ? (
+            <QrCodePanel value={connectionUri} />
+          ) : (
+            <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-white/10 bg-slate-950/80 p-6 text-center text-sm text-slate-400">
+              Enter a valid relay to generate a nostrconnect QR code.
+            </div>
+          )}
+        </div>
+
+        <div className="order-1 space-y-5 sm:order-2">
+          {connectionUri ? (
+            <a
+              className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
+              href={connectionUri}
+            >
+              Open signer app
+            </a>
+          ) : (
+            <button
+              className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-slate-700 px-5 py-3 text-base font-semibold text-slate-300"
+              type="button"
+              disabled
+            >
+              Open signer app
+            </button>
+          )}
+
+          <div className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-5 text-left">
+            <label className="grid gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                Signer relay
+              </span>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <input
+                  className="min-h-12 min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
+                  type="text"
+                  value={relayValue}
+                  onChange={(event) => onRelayChange(event.target.value)}
+                  placeholder={DEFAULT_REMOTE_SIGNER_RELAY}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+                <button
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/6 px-4 text-sm font-semibold text-white transition hover:bg-white/10 sm:w-auto"
+                  type="button"
+                  onClick={onRelaySet}
+                >
+                  Set
+                </button>
+              </div>
+            </label>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              On desktop, scan the QR code with your signer app. On mobile, tap
+              the button above to open the signer directly.
+            </p>
+            <p className="mt-3 text-sm leading-6 text-slate-400">
+              If your signer keeps old approvals around, look for an existing
+              `passwd-nsite` entry and remove duplicates there.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              {connectionUri ? <CopyButton value={connectionUri} /> : null}
+              <button
+                className="inline-flex min-h-10 items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 text-sm font-medium text-slate-200 transition hover:bg-white/10"
+                type="button"
+                onClick={onBack}
+              >
+                Back
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {relayError ? (
+        <p className="rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+          {relayError}
+        </p>
+      ) : null}
+
+      {errorMessage ? (
+        <p className="rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">
+          {errorMessage}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function PublishSuccessView({
   result,
-  onReset,
   showLockedSiteLink,
 }: {
   result: PublishResult;
-  onReset: () => void;
   showLockedSiteLink: boolean;
 }) {
   const currentGatewayUrl = getCurrentGatewayUrl(result);
@@ -314,13 +500,6 @@ function PublishSuccessView({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <button
-          className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-white/10 bg-white/6 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-          type="button"
-          onClick={onReset}
-        >
-          Publish another site
-        </button>
         {showLockedSiteLink ? (
           <a
             className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-white/10 bg-white/6 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
@@ -417,6 +596,9 @@ function PublishPage() {
   const [phase, setPhase] = useState<PublishPhase>("connect");
   const [statusMessage, setStatusMessage] = useState("Connecting signer...");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [publishSigner, setPublishSigner] = useState<PublishSigner | null>(
+    null,
+  );
   const [publishProfile, setPublishProfile] = useState<PublishProfile | null>(
     null,
   );
@@ -431,6 +613,99 @@ function PublishPage() {
     null,
   );
   const [hasLockedArchive, setHasLockedArchive] = useState(false);
+  const [remoteConnectionUri, setRemoteConnectionUri] = useState<string | null>(
+    null,
+  );
+  const [remoteRelayInput, setRemoteRelayInput] = useState(
+    DEFAULT_REMOTE_SIGNER_RELAY,
+  );
+  const [remoteRelayUrl, setRemoteRelayUrl] = useState(() => {
+    return normalizePublishSignerRelayInput(DEFAULT_REMOTE_SIGNER_RELAY);
+  });
+  const [remoteRelayError, setRemoteRelayError] = useState<string | null>(null);
+  const [remoteSessionExpiresAt, setRemoteSessionExpiresAt] = useState<
+    number | null
+  >(null);
+  const publishSignerRef = useRef<PublishSigner | null>(null);
+  const remoteConnectAbortRef = useRef<AbortController | null>(null);
+
+  const currentNamedSiteHost = parseCurrentNamedSiteHost(
+    window.location.hostname,
+  );
+  const isUpdateMode = Boolean(
+    publishProfile &&
+    currentNamedSiteHost &&
+    currentNamedSiteHost.pubkeyB36 === hexPubkeyToBase36(publishProfile.pubkey),
+  );
+  const effectiveSiteId = isUpdateMode
+    ? (currentNamedSiteHost?.siteId ?? "")
+    : siteId.trim().toLowerCase();
+
+  const disconnectSigner = useCallback(async (signer: PublishSigner | null) => {
+    if (!signer) {
+      return;
+    }
+
+    try {
+      await signer.disconnect();
+    } catch (error) {
+      logPublishError("Failed to disconnect publish signer", error);
+    }
+  }, []);
+
+  function abortPendingRemoteConnect() {
+    remoteConnectAbortRef.current?.abort("Cancelled remote signer connect.");
+    remoteConnectAbortRef.current = null;
+  }
+
+  const activateSigner = useCallback(
+    async (signer: PublishSigner, profile: PublishProfile) => {
+      const previousSigner = publishSignerRef.current;
+      publishSignerRef.current = signer;
+      setPublishSigner(signer);
+      setPublishProfile(profile);
+      setRemoteConnectionUri(null);
+      setRemoteRelayError(null);
+
+      if (signer.kind === "remote") {
+        const expiresAt = Date.now() + REMOTE_SESSION_DURATION_MS;
+        setRemoteSessionExpiresAt(expiresAt);
+      } else {
+        setRemoteSessionExpiresAt(null);
+      }
+
+      if (previousSigner && previousSigner !== signer) {
+        await disconnectSigner(previousSigner);
+      }
+    },
+    [disconnectSigner],
+  );
+
+  async function clearActiveSigner() {
+    const signer = publishSignerRef.current;
+    publishSignerRef.current = null;
+    setPublishSigner(null);
+    setPublishProfile(null);
+    setRemoteConnectionUri(null);
+    setRemoteSessionExpiresAt(null);
+    await disconnectSigner(signer);
+  }
+
+  async function expireRemoteSignerSession() {
+    if (publishSignerRef.current?.kind !== "remote") {
+      return;
+    }
+
+    await clearActiveSigner();
+    setPhase("connect");
+    setErrorMessage(
+      "Remote signer session expired. Reconnect to publish again.",
+    );
+  }
+
+  const handleRemoteSessionExpired = useEffectEvent(() => {
+    void expireRemoteSignerSession();
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -453,14 +728,122 @@ function PublishPage() {
     };
   }, []);
 
+  useEffect(() => {
+    publishSignerRef.current = publishSigner;
+  }, [publishSigner]);
+
+  useEffect(() => {
+    return () => {
+      abortPendingRemoteConnect();
+      const signer = publishSignerRef.current;
+      if (signer) {
+        void disconnectSigner(signer);
+      }
+    };
+  }, [disconnectSigner]);
+
+  useEffect(() => {
+    if (publishSigner?.kind !== "remote" || !remoteSessionExpiresAt) {
+      return;
+    }
+
+    let timeoutId = 0;
+
+    const tick = () => {
+      const remaining = remoteSessionExpiresAt - Date.now();
+      if (remaining <= 0) {
+        handleRemoteSessionExpired();
+        return;
+      }
+
+      timeoutId = window.setTimeout(tick, 1000);
+    };
+
+    tick();
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [publishSigner, remoteSessionExpiresAt]);
+
+  useEffect(() => {
+    if (phase !== "remote-connect") {
+      return;
+    }
+
+    abortPendingRemoteConnect();
+
+    if (!remoteRelayUrl) {
+      setRemoteConnectionUri(null);
+      return;
+    }
+
+    const session = createRemotePublishSignerSession(remoteRelayUrl);
+    const abortController = new AbortController();
+    let signer: PublishSigner | null = null;
+    let ignore = false;
+
+    remoteConnectAbortRef.current = abortController;
+    setRemoteConnectionUri(session.connectionUri);
+
+    void (async () => {
+      try {
+        signer = await session.connect(abortController.signal);
+        if (ignore || remoteConnectAbortRef.current !== abortController) {
+          await disconnectSigner(signer);
+          return;
+        }
+
+        remoteConnectAbortRef.current = null;
+        setPhase("loading");
+        setStatusMessage("Loading signer profile...");
+
+        const profile = await loadPublishProfile(signer);
+        if (ignore) {
+          await disconnectSigner(signer);
+          return;
+        }
+
+        await activateSigner(signer, profile);
+        setPhase("ready");
+      } catch (error) {
+        if (signer) {
+          await disconnectSigner(signer);
+        }
+
+        if (ignore || abortController.signal.aborted) {
+          return;
+        }
+
+        logPublishError("Failed to connect remote publish signer", error);
+        remoteConnectAbortRef.current = null;
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Failed to connect remote signer.",
+        );
+      }
+    })();
+
+    return () => {
+      ignore = true;
+      abortController.abort("Cancelled remote signer connect.");
+      if (remoteConnectAbortRef.current === abortController) {
+        remoteConnectAbortRef.current = null;
+      }
+    };
+  }, [activateSigner, disconnectSigner, phase, remoteRelayUrl]);
+
   async function handleConnectPublisher() {
+    abortPendingRemoteConnect();
     setPhase("loading");
     setStatusMessage("Connecting signer...");
     setErrorMessage(null);
 
     try {
-      const profile = await loadPublishProfile();
-      setPublishProfile(profile);
+      const signer = createExtensionPublishSigner();
+      const profile = await loadPublishProfile(signer);
+      await activateSigner(signer, profile);
       setPhase("ready");
     } catch (error) {
       logPublishError("Failed to connect publish signer", error);
@@ -469,6 +852,32 @@ function PublishPage() {
         error instanceof Error ? error.message : "Failed to connect signer.",
       );
     }
+  }
+
+  async function handleConnectRemoteSigner() {
+    setPhase("remote-connect");
+    setErrorMessage(null);
+  }
+
+  function handleSetRemoteRelay() {
+    const normalizedRelay = normalizePublishSignerRelayInput(remoteRelayInput);
+    if (!normalizedRelay) {
+      setRemoteRelayError("Enter a valid relay hostname or websocket URL.");
+      return;
+    }
+
+    setRemoteRelayInput(normalizedRelay);
+    setRemoteRelayUrl(normalizedRelay);
+    setRemoteRelayError(null);
+    setErrorMessage(null);
+  }
+
+  function handleBackFromRemoteConnect() {
+    abortPendingRemoteConnect();
+    setRemoteConnectionUri(null);
+    setRemoteRelayError(null);
+    setPhase("connect");
+    setErrorMessage(null);
   }
 
   function handleFolderChange(event: ChangeEvent<HTMLInputElement>) {
@@ -480,7 +889,7 @@ function PublishPage() {
   }
 
   async function handlePublish() {
-    if (!publishProfile) {
+    if (!publishProfile || !publishSigner) {
       setErrorMessage("Connect a signer before publishing.");
       return;
     }
@@ -522,7 +931,7 @@ function PublishPage() {
       const uploadResult = await uploadPublishBundle(
         bundle.blobs,
         targetServers,
-        signNostrEvent,
+        publishSigner.signEvent,
         ({ message }) => setStatusMessage(message),
       );
 
@@ -530,12 +939,12 @@ function PublishPage() {
       const manifestResult = await buildSignedSiteManifest(
         bundle,
         {
-          siteId,
+          siteId: effectiveSiteId,
           title,
           description,
           servers: uploadResult.successfulServers,
         },
-        signNostrEvent,
+        publishSigner.signEvent,
       );
 
       setStatusMessage("Publishing manifest to outbox relays...");
@@ -554,7 +963,7 @@ function PublishPage() {
       setPublishResult({
         eventId: manifestResult.event.id,
         aggregateHash: manifestResult.aggregateHash,
-        siteId: siteId.trim().toLowerCase(),
+        siteId: effectiveSiteId,
         pubkey: publishProfile.pubkey,
         pathCount: manifestResult.pathCount,
         servers: uploadResult.successfulServers,
@@ -576,7 +985,7 @@ function PublishPage() {
   const canPublish =
     folderFiles.length > 0 &&
     password.trim().length > 0 &&
-    siteId.trim().length > 0;
+    effectiveSiteId.length > 0;
 
   if (publishResult) {
     return (
@@ -585,11 +994,6 @@ function PublishPage() {
           <PublishSuccessView
             result={publishResult}
             showLockedSiteLink={hasLockedArchive}
-            onReset={() => {
-              setPublishResult(null);
-              setPhase("ready");
-              setErrorMessage(null);
-            }}
           />
         </section>
       </div>
@@ -598,13 +1002,27 @@ function PublishPage() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <section className="w-full max-w-xl rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_35%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] p-8 shadow-[0_40px_120px_rgba(2,6,23,0.55)] sm:p-10">
+      <section
+        className={`w-full ${phase === "remote-connect" ? "max-w-3xl" : "max-w-xl"} rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_35%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] p-8 shadow-[0_40px_120px_rgba(2,6,23,0.55)] sm:p-10`}
+      >
         {phase === "loading" ? (
           <LoadingView title="Preparing publish" message={statusMessage} />
         ) : null}
 
         {phase === "publishing" ? (
           <LoadingView title="Publishing site" message={statusMessage} />
+        ) : null}
+
+        {phase === "remote-connect" ? (
+          <RemoteSignerConnectView
+            connectionUri={remoteConnectionUri}
+            errorMessage={errorMessage}
+            relayValue={remoteRelayInput}
+            relayError={remoteRelayError}
+            onRelayChange={setRemoteRelayInput}
+            onRelaySet={handleSetRemoteRelay}
+            onBack={handleBackFromRemoteConnect}
+          />
         ) : null}
 
         {phase === "connect" ? (
@@ -614,18 +1032,37 @@ function PublishPage() {
                 Publish site
               </h1>
               <p className="text-sm leading-6 text-slate-400 sm:text-base">
-                Connect a NIP-07 signer before creating and publishing a new
-                locked site.
+                Connect a signer before creating and publishing a new locked
+                site.
               </p>
             </div>
 
-            <button
-              className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
-              type="button"
-              onClick={handleConnectPublisher}
-            >
-              Connect NIP-07 signer
-            </button>
+            <div className="grid gap-4 text-left">
+              <button
+                className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
+                type="button"
+                onClick={handleConnectPublisher}
+              >
+                Connect NIP-07 signer
+              </button>
+
+              <div className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-5 text-left">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  Remote signer
+                </p>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  Pair a temporary `passwd-nsite` session by opening a
+                  nostrconnect link or scanning a QR code in your signer app.
+                </p>
+                <button
+                  className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full border border-white/10 bg-white/6 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                  type="button"
+                  onClick={handleConnectRemoteSigner}
+                >
+                  Connect remote signer
+                </button>
+              </div>
+            </div>
 
             {errorMessage ? (
               <p className="rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">
@@ -647,11 +1084,12 @@ function PublishPage() {
           <div className="space-y-8">
             <div className="space-y-3 text-center">
               <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                Publish site
+                {isUpdateMode ? "Update site" : "Publish site"}
               </h1>
               <p className="text-sm leading-6 text-slate-400 sm:text-base">
-                Build a locked `site.7z`, upload the site blobs to blossom, then
-                sign and publish a named site manifest to your outbox relays.
+                {isUpdateMode
+                  ? `Replace the locked site bundle for ${effectiveSiteId} on this gateway, then publish the updated named site manifest to your outbox relays.`
+                  : "Build a locked `site.7z`, upload the site blobs to blossom, then sign and publish a named site manifest to your outbox relays."}
               </p>
             </div>
 
@@ -736,24 +1174,21 @@ function PublishPage() {
                 />
               </label>
 
-              <label className="grid gap-2">
-                <span className="text-sm font-medium text-slate-200">
-                  Named site id
-                </span>
-                <input
-                  className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
-                  type="text"
-                  value={siteId}
-                  onChange={(event) =>
-                    setSiteId(event.target.value.toLowerCase())
-                  }
-                  placeholder="blog"
-                  maxLength={13}
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                />
-              </label>
+              {isUpdateMode ? (
+                <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm">
+                  <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/80">
+                    Update mode
+                  </p>
+                  <p className="mt-1 font-medium text-white">
+                    Updating site{" "}
+                    <span className="font-mono">{effectiveSiteId}</span>
+                  </p>
+                  <p className="mt-1 text-slate-300">
+                    This gateway hostname already identifies the nsite name for
+                    the connected signer.
+                  </p>
+                </div>
+              ) : null}
 
               <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/40">
                 <button
@@ -771,8 +1206,29 @@ function PublishPage() {
                 {showAdvanced ? (
                   <div className="grid gap-4 border-t border-white/10 px-4 py-4">
                     <p className="text-sm text-slate-400">
-                      Most locked sites do not need a title or description.
+                      Most locked sites do not need extra metadata.
                     </p>
+
+                    {!isUpdateMode ? (
+                      <label className="grid gap-2">
+                        <span className="text-sm font-medium text-slate-200">
+                          Nsite name
+                        </span>
+                        <input
+                          className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
+                          type="text"
+                          value={siteId}
+                          onChange={(event) =>
+                            setSiteId(event.target.value.toLowerCase())
+                          }
+                          placeholder="blog"
+                          maxLength={13}
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
+                        />
+                      </label>
+                    ) : null}
 
                     <label className="grid gap-2">
                       <span className="text-sm font-medium text-slate-200">

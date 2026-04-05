@@ -4,11 +4,35 @@ import type {
   EventTemplate as NostrEventTemplate,
   VerifiedEvent,
 } from "nostr-tools";
+import { BunkerSigner, createNostrConnectURI } from "nostr-tools/nip46";
+import { generateSecretKey, getPublicKey } from "nostr-tools/pure";
 import {
   DEFAULT_BLOSSOM_SERVERS,
   DEFAULT_RELAYS,
   LOOKUP_RELAYS,
 } from "../const";
+
+export type PublishSigner = {
+  kind: "nip07" | "remote";
+  getPublicKey(): Promise<string>;
+  signEvent(event: NostrEventTemplate): Promise<VerifiedEvent>;
+  disconnect(): Promise<void>;
+};
+
+export type RemotePublishSignerSession = {
+  connectionUri: string;
+  connect(abortSignal?: AbortSignal): Promise<PublishSigner>;
+};
+
+const BLOSSOM_AUTH_KIND = 24242;
+const NSITE_MANIFEST_KIND = 35128;
+const REMOTE_SIGNER_NAME = "passwd-nsite";
+export const DEFAULT_REMOTE_SIGNER_RELAY = "bucket.coracle.social";
+const REMOTE_SIGNER_PERMS = [
+  "get_public_key",
+  `sign_event:${BLOSSOM_AUTH_KIND}`,
+  `sign_event:${NSITE_MANIFEST_KIND}`,
+] as const;
 
 export type PublishProfile = {
   pubkey: string;
@@ -29,6 +53,8 @@ type ProfileMetadata = {
   picture: string | null;
   displayName: string;
 };
+
+type PublishProfileSigner = Pick<PublishSigner, "getPublicKey">;
 
 function logNostrError(context: string, error: unknown) {
   console.error(context, error);
@@ -57,6 +83,19 @@ function normalizeRelayUrl(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+export function normalizePublishSignerRelayInput(input: string): string | null {
+  const trimmedInput = input.trim();
+  if (!trimmedInput) {
+    return null;
+  }
+
+  const relayInput = /^[a-z]+:\/\//i.test(trimmedInput)
+    ? trimmedInput
+    : `wss://${trimmedInput}`;
+
+  return normalizeRelayUrl(relayInput);
 }
 
 function normalizeHttpUrl(url: string): string | null {
@@ -188,12 +227,10 @@ function getProfileMetadata(event: NostrEvent | null): ProfileMetadata {
   }
 }
 
-export async function loadPublishProfile(): Promise<PublishProfile> {
-  if (!window.nostr) {
-    throw new Error("Install a NIP-07 extension to publish this site.");
-  }
-
-  const pubkey = await window.nostr.getPublicKey();
+export async function loadPublishProfile(
+  signer: PublishProfileSigner,
+): Promise<PublishProfile> {
+  const pubkey = await signer.getPublicKey();
   const lookupRelays = [...LOOKUP_RELAYS];
   const pool = new SimplePool();
 
@@ -250,6 +287,67 @@ export async function signNostrEvent(
   }
 
   return window.nostr.signEvent(event);
+}
+
+export function createExtensionPublishSigner(): PublishSigner {
+  if (!window.nostr?.getPublicKey || !window.nostr.signEvent) {
+    throw new Error("Install a NIP-07 extension to publish this site.");
+  }
+
+  return {
+    kind: "nip07",
+    getPublicKey() {
+      return window.nostr!.getPublicKey();
+    },
+    signEvent(event) {
+      return window.nostr!.signEvent(event);
+    },
+    async disconnect() {},
+  };
+}
+
+function createRemoteSignerSecret(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export function createRemotePublishSignerSession(
+  relayUrl: string,
+): RemotePublishSignerSession {
+  const clientSecretKey = generateSecretKey();
+  const connectionUri = createNostrConnectURI({
+    clientPubkey: getPublicKey(clientSecretKey),
+    relays: [relayUrl],
+    secret: createRemoteSignerSecret(),
+    perms: [...REMOTE_SIGNER_PERMS],
+    name: REMOTE_SIGNER_NAME,
+    url: new URL("#/publish", window.location.origin).toString(),
+  });
+
+  return {
+    connectionUri,
+    async connect(abortSignal) {
+      const signer = await BunkerSigner.fromURI(
+        clientSecretKey,
+        connectionUri,
+        {},
+        abortSignal,
+      );
+
+      return {
+        kind: "remote",
+        getPublicKey() {
+          return signer.getPublicKey();
+        },
+        signEvent(event) {
+          return signer.signEvent(event);
+        },
+        disconnect() {
+          return signer.close();
+        },
+      };
+    },
+  };
 }
 
 export type PublishRelayResult = {
