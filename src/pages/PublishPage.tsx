@@ -606,6 +606,7 @@ function PublishPage() {
   const [folderName, setFolderName] = useState("site");
   const [password, setPassword] = useState("");
   const [siteId, setSiteId] = useState("");
+  const [skipUpdateMode, setSkipUpdateMode] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -637,9 +638,16 @@ function PublishPage() {
     currentNamedSiteHost &&
     currentNamedSiteHost.pubkeyB36 === hexPubkeyToBase36(publishProfile.pubkey),
   );
-  const effectiveSiteId = isUpdateMode
+  const isUpdatingCurrentSite = isUpdateMode && !skipUpdateMode;
+  const effectiveSiteId = isUpdatingCurrentSite
     ? (currentNamedSiteHost?.siteId ?? "")
     : siteId.trim().toLowerCase();
+
+  useEffect(() => {
+    if (!isUpdateMode) {
+      setSkipUpdateMode(false);
+    }
+  }, [isUpdateMode]);
 
   const disconnectSigner = useCallback(async (signer: PublishSigner | null) => {
     if (!signer) {
@@ -1100,10 +1108,10 @@ function PublishPage() {
           <div className="space-y-6">
             <div className="space-y-3 text-center">
               <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                {isUpdateMode ? "Update site" : "Publish site"}
+                {isUpdatingCurrentSite ? "Update site" : "Publish site"}
               </h1>
               <p className="text-sm leading-6 text-slate-400 sm:text-base">
-                {isUpdateMode
+                {isUpdatingCurrentSite
                   ? `Replace the locked site bundle for ${effectiveSiteId} on this gateway, then publish the updated named site manifest to your outbox relays.`
                   : "Build a locked `site.7z`, upload the site blobs to blossom, then sign and publish a named site manifest to your outbox relays."}
               </p>
@@ -1216,19 +1224,32 @@ function PublishPage() {
                 />
               </label>
 
-              {isUpdateMode ? (
+              {isUpdatingCurrentSite ? (
                 <div className="rounded-xl bg-cyan-400/10 px-4 py-3 text-sm">
                   <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/80">
                     Update mode
                   </p>
                   <p className="mt-1 font-medium text-white">
-                    Updating site{" "}
-                    <span className="font-mono">{effectiveSiteId}</span>
+                    Current hostname matches{" "}
+                    <span className="font-mono">
+                      {currentNamedSiteHost?.siteId}
+                    </span>
                   </p>
                   <p className="mt-1 text-slate-300">
                     This gateway hostname already identifies the nsite name for
                     the connected signer.
                   </p>
+                  <button
+                    className="mt-3 text-sm font-medium text-cyan-200 transition hover:text-cyan-100"
+                    type="button"
+                    onClick={() => {
+                      setSkipUpdateMode(true);
+                      setShowAdvanced(true);
+                      setSiteId("");
+                    }}
+                  >
+                    dont update
+                  </button>
                 </div>
               ) : null}
 
@@ -1251,7 +1272,7 @@ function PublishPage() {
                       Most locked sites do not need extra metadata.
                     </p>
 
-                    {!isUpdateMode ? (
+                    {!isUpdatingCurrentSite ? (
                       <label className="grid gap-2">
                         <span className="text-sm font-medium text-slate-200">
                           Nsite name
