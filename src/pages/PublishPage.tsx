@@ -1226,6 +1226,27 @@ function PublishPage() {
                 />
               </label>
 
+              {!isUpdatingCurrentSite ? (
+                <label className="grid gap-2">
+                  <span className="text-sm font-medium text-slate-200">
+                    Nsite name
+                  </span>
+                  <input
+                    className="min-h-11 rounded-xl border border-white/10 bg-slate-950/80 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
+                    type="text"
+                    value={siteId}
+                    onChange={(event) =>
+                      setSiteId(event.target.value.toLowerCase())
+                    }
+                    placeholder="blog"
+                    maxLength={13}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                  />
+                </label>
+              ) : null}
+
               {isUpdatingCurrentSite ? (
                 <div className="rounded-xl bg-cyan-400/10 px-4 py-3 text-sm">
                   <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/80">
@@ -1246,7 +1267,6 @@ function PublishPage() {
                     type="button"
                     onClick={() => {
                       setSkipUpdateMode(true);
-                      setShowAdvanced(true);
                       setSiteId("");
                     }}
                   >
@@ -1273,27 +1293,6 @@ function PublishPage() {
                     <p className="text-sm text-slate-400">
                       Most locked sites do not need extra metadata.
                     </p>
-
-                    {!isUpdatingCurrentSite ? (
-                      <label className="grid gap-2">
-                        <span className="text-sm font-medium text-slate-200">
-                          Nsite name
-                        </span>
-                        <input
-                          className="min-h-11 rounded-xl border border-white/10 bg-slate-950/80 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
-                          type="text"
-                          value={siteId}
-                          onChange={(event) =>
-                            setSiteId(event.target.value.toLowerCase())
-                          }
-                          placeholder="blog"
-                          maxLength={13}
-                          autoCapitalize="none"
-                          autoCorrect="off"
-                          spellCheck={false}
-                        />
-                      </label>
-                    ) : null}
 
                     <label className="grid gap-2">
                       <span className="text-sm font-medium text-slate-200">
