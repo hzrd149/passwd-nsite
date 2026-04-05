@@ -272,12 +272,6 @@ function HomePage() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
       <section className="w-full max-w-xl rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_35%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] p-8 shadow-[0_40px_120px_rgba(2,6,23,0.55)] sm:p-10">
-        <div className="mb-10 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-300/85">
-            passwd nsite
-          </p>
-        </div>
-
         {phase === "checking" || phase === "downloading" ? (
           <LoadingView title="Site is locked" message={statusMessage} />
         ) : null}

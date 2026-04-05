@@ -1,5 +1,9 @@
 import { SimplePool } from "nostr-tools";
-import type { Event as NostrEvent } from "nostr-tools";
+import type {
+  Event as NostrEvent,
+  EventTemplate as NostrEventTemplate,
+  VerifiedEvent,
+} from "nostr-tools";
 import {
   DEFAULT_BLOSSOM_SERVERS,
   DEFAULT_RELAYS,
@@ -7,6 +11,7 @@ import {
 } from "../const";
 
 export type PublishProfile = {
+  pubkey: string;
   picture: string | null;
   displayName: string;
   lookupRelays: string[];
@@ -24,6 +29,10 @@ type ProfileMetadata = {
   picture: string | null;
   displayName: string;
 };
+
+function logNostrError(context: string, error: unknown) {
+  console.error(context, error);
+}
 
 function normalizeRelayUrl(url: string): string | null {
   try {
@@ -191,13 +200,22 @@ export async function loadPublishProfile(): Promise<PublishProfile> {
   try {
     const [profileEvent, relayListEvent, blossomListEvent] = await Promise.all([
       getLatestReplaceableEvent(pool, lookupRelays, pubkey, 0).catch(
-        () => null,
+        (error) => {
+          logNostrError("Failed to load profile metadata", error);
+          return null;
+        },
       ),
       getLatestReplaceableEvent(pool, lookupRelays, pubkey, 10002).catch(
-        () => null,
+        (error) => {
+          logNostrError("Failed to load outbox relay list", error);
+          return null;
+        },
       ),
       getLatestReplaceableEvent(pool, lookupRelays, pubkey, 10063).catch(
-        () => null,
+        (error) => {
+          logNostrError("Failed to load blossom server list", error);
+          return null;
+        },
       ),
     ]);
 
@@ -206,6 +224,7 @@ export async function loadPublishProfile(): Promise<PublishProfile> {
     const blossomServers = getBlossomServers(blossomListEvent);
 
     return {
+      pubkey,
       picture: profileMetadata.picture,
       displayName: profileMetadata.displayName,
       lookupRelays,
@@ -217,6 +236,72 @@ export async function loadPublishProfile(): Promise<PublishProfile> {
       hasConfiguredBlossomServers: blossomServers.length > 0,
       defaultRelays: [...DEFAULT_RELAYS],
       defaultBlossomServers: [...DEFAULT_BLOSSOM_SERVERS],
+    };
+  } finally {
+    pool.destroy();
+  }
+}
+
+export async function signNostrEvent(
+  event: NostrEventTemplate,
+): Promise<VerifiedEvent> {
+  if (!window.nostr?.signEvent) {
+    throw new Error("This signer does not support event signing.");
+  }
+
+  return window.nostr.signEvent(event);
+}
+
+export type PublishRelayResult = {
+  targetRelays: string[];
+  successfulRelays: string[];
+  failedRelays: Array<{ relay: string; error: string }>;
+};
+
+export async function publishEventToRelays(
+  event: NostrEvent,
+  relays: string[],
+): Promise<PublishRelayResult> {
+  const targetRelays = dedupe(relays.map((relay) => normalizeRelayUrl(relay)));
+
+  if (targetRelays.length === 0) {
+    throw new Error("Add at least one relay before publishing.");
+  }
+
+  const pool = new SimplePool();
+
+  try {
+    const relayResults = await Promise.allSettled(
+      pool.publish(targetRelays, event),
+    );
+    const successfulRelays: string[] = [];
+    const failedRelays: Array<{ relay: string; error: string }> = [];
+
+    relayResults.forEach((result, index) => {
+      const relay = targetRelays[index];
+
+      if (!relay) {
+        return;
+      }
+
+      if (result.status === "fulfilled") {
+        successfulRelays.push(relay);
+        return;
+      }
+
+      failedRelays.push({
+        relay,
+        error:
+          result.reason instanceof Error
+            ? result.reason.message
+            : "Relay publish failed.",
+      });
+    });
+
+    return {
+      targetRelays,
+      successfulRelays,
+      failedRelays,
     };
   } finally {
     pool.destroy();
