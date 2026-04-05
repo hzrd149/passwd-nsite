@@ -105,40 +105,69 @@ function HomePage() {
     "download" | "unlock" | "lock"
   >("download");
 
-  const checkForArchive = useCallback(async (): Promise<Uint8Array | null> => {
-    const response = await fetch("/site.7z", { cache: "no-store" });
+  const checkForArchive = useCallback(async (): Promise<boolean> => {
+    const response = await fetch("/site.7z", {
+      method: "HEAD",
+      cache: "no-store",
+    });
 
     if (response.status === 404) {
-      return null;
+      return false;
     }
 
     if (!response.ok) {
       throw new Error(`Archive check failed with status ${response.status}.`);
     }
 
+    return true;
+  }, []);
+
+  const downloadArchiveBytes = useCallback(async (): Promise<Uint8Array> => {
+    const response = await fetch("/site.7z", { cache: "no-store" });
+
+    if (response.status === 404) {
+      throw new Error("The locked site bundle was not found.");
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        `Archive download failed with status ${response.status}.`,
+      );
+    }
+
     const contentType = response.headers.get("content-type") ?? "";
     const bytes = new Uint8Array(await response.arrayBuffer());
 
     if (contentType.includes("text/html") || !isSevenZipArchive(bytes)) {
-      return null;
+      throw new Error("The locked site bundle is not a valid 7z archive.");
     }
 
     return bytes;
   }, []);
 
-  const downloadArchive = useCallback(async () => {
-    setPhase("downloading");
-    setStatusMessage("Preparing the locked site...");
+  const ensureArchiveBytes = useCallback(async (): Promise<Uint8Array> => {
+    if (archiveBytes) {
+      return archiveBytes;
+    }
+
+    setStatusMessage("Downloading locked site...");
+    const bytes = await downloadArchiveBytes();
+    setArchiveBytes(bytes);
+    return bytes;
+  }, [archiveBytes, downloadArchiveBytes]);
+
+  const prepareLockedSite = useCallback(async () => {
+    setPhase("checking");
+    setStatusMessage("Checking site lock...");
     setErrorMessage(null);
 
     try {
-      const bytes = await checkForArchive();
-      if (!bytes) {
+      const hasArchive = await checkForArchive();
+      if (!hasArchive) {
         window.location.replace("#/publish");
         return;
       }
 
-      setArchiveBytes(bytes);
       setPhase("locked");
       setStatusMessage("The locked site is ready.");
     } catch (error) {
@@ -166,7 +195,7 @@ function HomePage() {
           return;
         }
 
-        await downloadArchive();
+        await prepareLockedSite();
       } catch (error) {
         setRetryAction("download");
         setPhase("error");
@@ -179,26 +208,20 @@ function HomePage() {
     }
 
     void syncLockState();
-  }, [downloadArchive]);
+  }, [prepareLockedSite]);
 
   async function handleUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!archiveBytes) {
-      setRetryAction("download");
-      setPhase("error");
-      setErrorMessage("The locked site bundle is not available yet.");
-      return;
-    }
 
     setPhase("unlocking");
     setErrorMessage(null);
 
     try {
+      const bytes = await ensureArchiveBytes();
       setStatusMessage("Unlocking archive...");
       const { extractArchive } = await import("../lib/7zip");
       const extractedFiles = await extractArchive(
-        { path: "site.7z", data: archiveBytes },
+        { path: "site.7z", data: bytes },
         password,
       );
 
@@ -266,7 +289,7 @@ function HomePage() {
       return;
     }
 
-    void downloadArchive();
+    void prepareLockedSite();
   }
 
   return (
