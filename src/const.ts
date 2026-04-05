@@ -17,5 +17,5 @@ export const DEFAULT_RELAYS = [
 export const DEFAULT_BLOSSOM_SERVERS = [
   "https://nsite.run",
   "https://blossom.primal.net",
-  "https://nostr.download"
+  "https://nostr.download",
 ] as const;

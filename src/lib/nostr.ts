@@ -12,6 +12,9 @@ import {
   LOOKUP_RELAYS,
 } from "../const";
 
+const PROFILE_LOOKUP_GRACE_PERIOD_MS = 5000;
+const PROFILE_LOOKUP_FALLBACK_TIMEOUT_MS = 10000;
+
 export type PublishSigner = {
   kind: "nip07" | "remote";
   getPublicKey(): Promise<string>;
@@ -140,23 +143,139 @@ function pickLatestEvent(events: NostrEvent[]): NostrEvent | null {
   )[0];
 }
 
-async function getLatestReplaceableEvent(
+async function getLatestProfileEvents(
   pool: SimplePool,
   relays: string[],
   pubkey: string,
-  kind: number,
-): Promise<NostrEvent | null> {
-  const events = await pool.querySync(
-    relays,
-    {
-      authors: [pubkey],
-      kinds: [kind],
-      limit: 1,
-    },
-    { maxWait: 2000 },
-  );
+): Promise<{
+  profileEvent: NostrEvent | null;
+  relayListEvent: NostrEvent | null;
+  blossomListEvent: NostrEvent | null;
+}> {
+  return new Promise((resolve) => {
+    const eventsByKind = new Map<number, NostrEvent[]>();
+    const seenEventIds = new Set<string>();
+    const subscriptions = new Map<string, { close(reason?: string): void }>();
+    const completedRelays = new Set<string>();
+    let settled = false;
+    let graceTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    let fallbackTimeoutId: ReturnType<typeof setTimeout> | null =
+      window.setTimeout(() => {
+        finalize();
+      }, PROFILE_LOOKUP_FALLBACK_TIMEOUT_MS);
 
-  return pickLatestEvent(events);
+    function storeEvent(event: NostrEvent) {
+      if (seenEventIds.has(event.id)) {
+        return;
+      }
+
+      seenEventIds.add(event.id);
+      const existingEvents = eventsByKind.get(event.kind) ?? [];
+      existingEvents.push(event);
+      eventsByKind.set(event.kind, existingEvents);
+    }
+
+    function clearTimers() {
+      if (graceTimeoutId !== null) {
+        window.clearTimeout(graceTimeoutId);
+        graceTimeoutId = null;
+      }
+
+      if (fallbackTimeoutId !== null) {
+        window.clearTimeout(fallbackTimeoutId);
+        fallbackTimeoutId = null;
+      }
+    }
+
+    function closeSubscriptions(reason: string) {
+      subscriptions.forEach((subscription) => {
+        try {
+          subscription.close(reason);
+        } catch {
+          // Ignore close errors while shutting down lookup subscriptions.
+        }
+      });
+      subscriptions.clear();
+    }
+
+    function finalize() {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      clearTimers();
+      closeSubscriptions("profile lookup complete");
+
+      resolve({
+        profileEvent: pickLatestEvent(eventsByKind.get(0) ?? []),
+        relayListEvent: pickLatestEvent(eventsByKind.get(10002) ?? []),
+        blossomListEvent: pickLatestEvent(eventsByKind.get(10063) ?? []),
+      });
+    }
+
+    function markRelayComplete(relay: string) {
+      if (settled || completedRelays.has(relay)) {
+        return;
+      }
+
+      completedRelays.add(relay);
+
+      if (graceTimeoutId === null) {
+        graceTimeoutId = window.setTimeout(() => {
+          finalize();
+        }, PROFILE_LOOKUP_GRACE_PERIOD_MS);
+      }
+
+      if (completedRelays.size === relays.length) {
+        finalize();
+      }
+    }
+
+    relays.forEach((relayUrl) => {
+      void pool
+        .ensureRelay(relayUrl, {
+          connectionTimeout: PROFILE_LOOKUP_FALLBACK_TIMEOUT_MS,
+        })
+        .then((relay) => {
+          if (settled) {
+            return;
+          }
+
+          const subscription = relay.subscribe(
+            [
+              {
+                authors: [pubkey],
+                kinds: [0, 10002, 10063],
+              },
+            ],
+            {
+              onevent(event) {
+                storeEvent(event);
+              },
+              oneose() {
+                subscriptions.delete(relayUrl);
+                markRelayComplete(relayUrl);
+              },
+              onclose() {
+                subscriptions.delete(relayUrl);
+                markRelayComplete(relayUrl);
+              },
+              alreadyHaveEvent(eventId) {
+                return seenEventIds.has(eventId);
+              },
+              eoseTimeout: PROFILE_LOOKUP_FALLBACK_TIMEOUT_MS,
+            },
+          );
+
+          subscriptions.set(relayUrl, subscription);
+        })
+        .catch((error) => {
+          logNostrError(`Failed to connect lookup relay ${relayUrl}`, error);
+          markRelayComplete(relayUrl);
+        });
+    });
+  });
 }
 
 function getOutboxRelays(event: NostrEvent | null): string[] {
@@ -235,26 +354,17 @@ export async function loadPublishProfile(
   const pool = new SimplePool();
 
   try {
-    const [profileEvent, relayListEvent, blossomListEvent] = await Promise.all([
-      getLatestReplaceableEvent(pool, lookupRelays, pubkey, 0).catch(
+    const { profileEvent, relayListEvent, blossomListEvent } =
+      await getLatestProfileEvents(pool, lookupRelays, pubkey).catch(
         (error) => {
-          logNostrError("Failed to load profile metadata", error);
-          return null;
+          logNostrError("Failed to load publish profile", error);
+          return {
+            profileEvent: null,
+            relayListEvent: null,
+            blossomListEvent: null,
+          };
         },
-      ),
-      getLatestReplaceableEvent(pool, lookupRelays, pubkey, 10002).catch(
-        (error) => {
-          logNostrError("Failed to load outbox relay list", error);
-          return null;
-        },
-      ),
-      getLatestReplaceableEvent(pool, lookupRelays, pubkey, 10063).catch(
-        (error) => {
-          logNostrError("Failed to load blossom server list", error);
-          return null;
-        },
-      ),
-    ]);
+      );
 
     const profileMetadata = getProfileMetadata(profileEvent);
     const outboxRelays = getOutboxRelays(relayListEvent);
