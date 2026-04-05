@@ -10,15 +10,17 @@ import { nip19 } from "nostr-tools";
 import { qrcode } from "@libs/qrcode";
 
 import {
-  createExtensionPublishSigner,
-  createRemotePublishSignerSession,
-  DEFAULT_REMOTE_SIGNER_RELAY,
   loadPublishProfile,
   normalizePublishSignerRelayInput,
   publishEventToRelays,
   type PublishProfile,
   type PublishSigner,
 } from "../lib/nostr";
+import {
+  createExtensionPublishSigner,
+  createRemotePublishSignerSession,
+  DEFAULT_REMOTE_SIGNER_RELAY,
+} from "../lib/nostr-browser";
 import {
   buildArchiveInputs,
   buildSignedSiteManifest,

@@ -2,6 +2,7 @@
   "name": "passwd-nsite",
   "private": true,
   "version": "0.0.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,9 +15,7 @@
     "7z-wasm": "^1.2.0",
     "@libs/qrcode": "jsr:^3.0.1",
     "@std/media-types": "jsr:^1.1.0",
-    "nostr-tools": "^2.23.3",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "nostr-tools": "^2.23.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -28,6 +27,8 @@
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "globals": "^17.4.0",
     "prettier": "^3.8.1",
     "rollup": "^4.60.1",

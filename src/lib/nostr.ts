@@ -4,8 +4,6 @@ import type {
   EventTemplate as NostrEventTemplate,
   VerifiedEvent,
 } from "nostr-tools";
-import { BunkerSigner, createNostrConnectURI } from "nostr-tools/nip46";
-import { generateSecretKey, getPublicKey } from "nostr-tools/pure";
 import {
   DEFAULT_BLOSSOM_SERVERS,
   DEFAULT_RELAYS,
@@ -26,16 +24,6 @@ export type RemotePublishSignerSession = {
   connectionUri: string;
   connect(abortSignal?: AbortSignal): Promise<PublishSigner>;
 };
-
-const BLOSSOM_AUTH_KIND = 24242;
-const NSITE_MANIFEST_KIND = 35128;
-const REMOTE_SIGNER_NAME = "passwd-nsite";
-export const DEFAULT_REMOTE_SIGNER_RELAY = "bucket.coracle.social";
-const REMOTE_SIGNER_PERMS = [
-  "get_public_key",
-  `sign_event:${BLOSSOM_AUTH_KIND}`,
-  `sign_event:${NSITE_MANIFEST_KIND}`,
-] as const;
 
 export type PublishProfile = {
   pubkey: string;
@@ -58,6 +46,11 @@ type ProfileMetadata = {
 };
 
 type PublishProfileSigner = Pick<PublishSigner, "getPublicKey">;
+
+export type BrowserNostrApi = {
+  getPublicKey(): Promise<string>;
+  signEvent(event: NostrEventTemplate): Promise<VerifiedEvent>;
+};
 
 function logNostrError(context: string, error: unknown) {
   console.error(context, error);
@@ -159,10 +152,12 @@ async function getLatestProfileEvents(
     const completedRelays = new Set<string>();
     let settled = false;
     let graceTimeoutId: ReturnType<typeof setTimeout> | null = null;
-    let fallbackTimeoutId: ReturnType<typeof setTimeout> | null =
-      window.setTimeout(() => {
+    let fallbackTimeoutId: ReturnType<typeof setTimeout> | null = setTimeout(
+      () => {
         finalize();
-      }, PROFILE_LOOKUP_FALLBACK_TIMEOUT_MS);
+      },
+      PROFILE_LOOKUP_FALLBACK_TIMEOUT_MS,
+    );
 
     function storeEvent(event: NostrEvent) {
       if (seenEventIds.has(event.id)) {
@@ -177,12 +172,12 @@ async function getLatestProfileEvents(
 
     function clearTimers() {
       if (graceTimeoutId !== null) {
-        window.clearTimeout(graceTimeoutId);
+        clearTimeout(graceTimeoutId);
         graceTimeoutId = null;
       }
 
       if (fallbackTimeoutId !== null) {
-        window.clearTimeout(fallbackTimeoutId);
+        clearTimeout(fallbackTimeoutId);
         fallbackTimeoutId = null;
       }
     }
@@ -222,7 +217,7 @@ async function getLatestProfileEvents(
       completedRelays.add(relay);
 
       if (graceTimeoutId === null) {
-        graceTimeoutId = window.setTimeout(() => {
+        graceTimeoutId = setTimeout(() => {
           finalize();
         }, PROFILE_LOOKUP_GRACE_PERIOD_MS);
       }
@@ -389,74 +384,19 @@ export async function loadPublishProfile(
   }
 }
 
-export async function signNostrEvent(
-  event: NostrEventTemplate,
-): Promise<VerifiedEvent> {
-  if (!window.nostr?.signEvent) {
-    throw new Error("This signer does not support event signing.");
-  }
-
-  return window.nostr.signEvent(event);
-}
-
-export function createExtensionPublishSigner(): PublishSigner {
-  if (!window.nostr?.getPublicKey || !window.nostr.signEvent) {
-    throw new Error("Install a NIP-07 extension to publish this site.");
-  }
-
+export function createPublishSigner(
+  kind: PublishSigner["kind"],
+  signer: BrowserNostrApi,
+): PublishSigner {
   return {
-    kind: "nip07",
+    kind,
     getPublicKey() {
-      return window.nostr!.getPublicKey();
+      return signer.getPublicKey();
     },
     signEvent(event) {
-      return window.nostr!.signEvent(event);
+      return signer.signEvent(event);
     },
     async disconnect() {},
-  };
-}
-
-function createRemoteSignerSecret(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-export function createRemotePublishSignerSession(
-  relayUrl: string,
-): RemotePublishSignerSession {
-  const clientSecretKey = generateSecretKey();
-  const connectionUri = createNostrConnectURI({
-    clientPubkey: getPublicKey(clientSecretKey),
-    relays: [relayUrl],
-    secret: createRemoteSignerSecret(),
-    perms: [...REMOTE_SIGNER_PERMS],
-    name: REMOTE_SIGNER_NAME,
-    url: new URL("#/publish", window.location.origin).toString(),
-  });
-
-  return {
-    connectionUri,
-    async connect(abortSignal) {
-      const signer = await BunkerSigner.fromURI(
-        clientSecretKey,
-        connectionUri,
-        {},
-        abortSignal,
-      );
-
-      return {
-        kind: "remote",
-        getPublicKey() {
-          return signer.getPublicKey();
-        },
-        signEvent(event) {
-          return signer.signEvent(event);
-        },
-        disconnect() {
-          return signer.close();
-        },
-      };
-    },
   };
 }
 

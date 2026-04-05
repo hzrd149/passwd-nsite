@@ -1,17 +1,9 @@
 import SevenZipFactory from "7z-wasm";
 import type { SevenZipModule, SevenZipModuleFactory } from "7z-wasm";
-import sevenZipWasmUrl from "7z-wasm/7zz.wasm?url";
-import type { SevenZipInputFile } from "./7zip-types";
 
-const SevenZip = SevenZipFactory as unknown as SevenZipModuleFactory;
-
-export type SevenZipArchiveEntry = {
+export type SevenZipInputFile = {
   path: string;
-  isDirectory: boolean;
-};
-
-export type SevenZipExtractedFile = SevenZipArchiveEntry & {
-  data?: Uint8Array;
+  data: ArrayBuffer | Uint8Array;
 };
 
 type SevenZipRunResult = {
@@ -21,14 +13,6 @@ type SevenZipRunResult = {
   combinedOutput: string;
   thrownError?: unknown;
 };
-
-const wasmBinaryPromise = fetch(sevenZipWasmUrl).then(async (response) => {
-  if (!response.ok) {
-    throw new Error("Failed to load the 7-Zip runtime.");
-  }
-
-  return response.arrayBuffer();
-});
 
 function normalizeArchiveName(fileName: string): string {
   return fileName || "archive.7z";
@@ -77,32 +61,6 @@ function createDirectoryTree(fs: SevenZipModule["FS"], path: string) {
   }
 }
 
-function parseArchiveEntries(
-  output: string,
-  archiveName: string,
-): SevenZipArchiveEntry[] {
-  return output
-    .split(/\r?\n\r?\n+/)
-    .map((block) => {
-      const pathMatch = block.match(/^Path = (.+)$/m);
-
-      if (!pathMatch) {
-        return null;
-      }
-
-      const path = pathMatch[1].trim();
-      if (!path || path === archiveName) {
-        return null;
-      }
-
-      return {
-        path,
-        isDirectory: /^Folder = \+$/m.test(block),
-      };
-    })
-    .filter((entry): entry is SevenZipArchiveEntry => entry !== null);
-}
-
 function formatThrownError(thrownError: unknown): string | null {
   if (!thrownError) {
     return null;
@@ -146,37 +104,6 @@ function getSevenZipError(result: SevenZipRunResult, context?: string): Error {
   return new Error(sections.join("\n\n"));
 }
 
-function walkExtractedFiles(
-  fs: SevenZipModule["FS"],
-  rootPath: string,
-  currentPath = rootPath,
-): SevenZipExtractedFile[] {
-  const names = fs
-    .readdir(currentPath)
-    .filter((name: string) => name !== "." && name !== "..");
-
-  return names.flatMap((name: string) => {
-    const fullPath = `${currentPath}/${name}`;
-    const relativePath = fullPath.slice(rootPath.length + 1);
-    const stats = fs.stat(fullPath);
-
-    if (fs.isDir(stats.mode)) {
-      return [
-        { path: relativePath, isDirectory: true },
-        ...walkExtractedFiles(fs, rootPath, fullPath),
-      ];
-    }
-
-    return [
-      {
-        path: relativePath,
-        isDirectory: false,
-        data: fs.readFile(fullPath),
-      },
-    ];
-  });
-}
-
 async function withSevenZip<T>(
   work: (
     sevenZip: SevenZipModule,
@@ -189,7 +116,6 @@ async function withSevenZip<T>(
   };
 
   const sevenZip = await SevenZip({
-    wasmBinary: await wasmBinaryPromise,
     print: (line: string) => output.stdout.push(line),
     printErr: (line: string) => output.stderr.push(line),
   });
@@ -223,69 +149,6 @@ function runSevenZip(
     combinedOutput: `${stdoutText}\n${stderrText}`,
     thrownError,
   };
-}
-
-export async function listArchiveEntries(
-  archive: File | SevenZipInputFile,
-  password = "",
-): Promise<SevenZipArchiveEntry[]> {
-  const archiveName = normalizeArchiveName(
-    archive instanceof File ? archive.name : archive.path,
-  );
-  const archiveData = normalizeFileData(
-    archive instanceof File ? await archive.arrayBuffer() : archive.data,
-  );
-
-  return withSevenZip((sevenZip, output) => {
-    sevenZip.FS.writeFile(archiveName, archiveData);
-
-    const args = ["l", "-slt", archiveName];
-    if (password) {
-      args.push(`-p${password}`);
-    }
-
-    const result = runSevenZip(sevenZip, output, args);
-    const entries = parseArchiveEntries(result.stdout, archiveName);
-
-    if (entries.length > 0) {
-      return entries;
-    }
-
-    throw getSevenZipError(result, "7-Zip could not read that archive.");
-  });
-}
-
-export async function extractArchive(
-  archive: File | SevenZipInputFile,
-  password = "",
-): Promise<SevenZipExtractedFile[]> {
-  const archiveName = normalizeArchiveName(
-    archive instanceof File ? archive.name : archive.path,
-  );
-  const archiveData = normalizeFileData(
-    archive instanceof File ? await archive.arrayBuffer() : archive.data,
-  );
-
-  return withSevenZip((sevenZip, output) => {
-    const outputDir = "/extracted";
-
-    sevenZip.FS.mkdir(outputDir);
-    sevenZip.FS.writeFile(archiveName, archiveData);
-
-    const args = ["x", archiveName, `-o${outputDir}`, "-y"];
-    if (password) {
-      args.push(`-p${password}`);
-    }
-
-    const result = runSevenZip(sevenZip, output, args);
-    const extractedFiles = walkExtractedFiles(sevenZip.FS, outputDir);
-
-    if (extractedFiles.length > 0) {
-      return extractedFiles;
-    }
-
-    throw getSevenZipError(result, "7-Zip could not extract that archive.");
-  });
 }
 
 export async function createArchive(
@@ -365,3 +228,4 @@ export async function createEncryptedArchive(
 
   return createArchive(files, { password, archiveName });
 }
+const SevenZip = SevenZipFactory as unknown as SevenZipModuleFactory;

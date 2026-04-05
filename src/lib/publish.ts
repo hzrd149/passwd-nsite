@@ -1,6 +1,6 @@
 import type { EventTemplate, VerifiedEvent } from "nostr-tools";
 
-import type { SevenZipInputFile } from "./7zip";
+import type { SevenZipInputFile } from "./7zip-types";
 
 export { uploadPublishBundle } from "./blossom";
 
@@ -44,7 +44,7 @@ export type PublishManifestResult = {
   pathCount: number;
 };
 
-function stripSharedRoot(paths: string[]): string[] {
+export function stripSharedRoot(paths: string[]): string[] {
   if (paths.length === 0) {
     return paths;
   }
@@ -72,7 +72,7 @@ function stripSharedRoot(paths: string[]): string[] {
   return splitPaths.map((segments) => segments.slice(1).join("/"));
 }
 
-function normalizeRelativePath(path: string): string {
+export function normalizeRelativePath(path: string): string {
   return path
     .replace(/\\/g, "/")
     .split("/")
@@ -81,7 +81,7 @@ function normalizeRelativePath(path: string): string {
     .join("/");
 }
 
-function normalizeAbsolutePath(path: string): string {
+export function normalizeAbsolutePath(path: string): string {
   const normalizedPath = normalizeRelativePath(path);
   return normalizedPath ? `/${normalizedPath}` : "/";
 }
@@ -96,14 +96,14 @@ function hex(buffer: ArrayBuffer): string {
     .join("");
 }
 
-async function sha256Hex(data: BufferSource | string): Promise<string> {
+export async function sha256Hex(data: BufferSource | string): Promise<string> {
   const bytes =
     typeof data === "string" ? new TextEncoder().encode(data) : data;
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return hex(digest);
 }
 
-async function sha256HexBytes(bytes: Uint8Array): Promise<string> {
+export async function sha256HexBytes(bytes: Uint8Array): Promise<string> {
   const copy = bytes.slice();
   return sha256Hex(copy.buffer);
 }
@@ -112,7 +112,7 @@ async function blobToBytes(blob: Blob): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer());
 }
 
-function assertSiteId(siteId: string): string {
+export function assertSiteId(siteId: string): string {
   const normalizedSiteId = siteId.trim().toLowerCase();
 
   if (
@@ -127,7 +127,7 @@ function assertSiteId(siteId: string): string {
   return normalizedSiteId;
 }
 
-function parseAssetsManifest(content: string): BuildAssetEntry[] {
+export function parseAssetsManifest(content: string): BuildAssetEntry[] {
   const parsed = JSON.parse(content) as unknown;
 
   if (!Array.isArray(parsed)) {
@@ -278,6 +278,12 @@ export async function createPublishBundle(
     }),
   });
 
+  return preparePublishBundle(blobs);
+}
+
+export async function preparePublishBundle(
+  blobs: PublishBlob[],
+): Promise<PreparedPublishBundle> {
   const pathTags = blobs
     .map((blob) => ["path", blob.path, blob.sha256])
     .sort((left, right) => left[1]!.localeCompare(right[1]!));

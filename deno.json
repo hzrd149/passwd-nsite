@@ -1,0 +1,27 @@
+{
+  "name": "@hzrd149/passwd-nsite",
+  "version": "0.1.0",
+  "license": "MIT",
+  "exports": "./mod.ts",
+  "tasks": {
+    "publish": "deno run -A cli.ts publish"
+  },
+  "exclude": [
+    ".nsite",
+    "vite.config.ts",
+    "dev",
+    "package.json",
+    "pnpm-lock.yaml",
+    "tsconfig.*",
+    "eslint.*",
+    "index.html",
+    "AGENTS.md",
+    "public",
+    "!dist"
+  ],
+  "imports": {
+    "@libs/qrcode": "jsr:@libs/qrcode@^3.0.1",
+    "@std/path": "jsr:@std/path@^1.1.4",
+    "@std/media-types": "jsr:@std/media-types@^1.1.0"
+  }
+}

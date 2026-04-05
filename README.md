@@ -221,6 +221,36 @@ Each blob upload is:
 
 This section is for users and agents that want to reproduce the web publish flow from the command line.
 
+This repository now includes a Deno CLI entrypoint at `cli.ts`.
+
+The package root entry is `mod.ts`, so a published JSR package can be run as:
+
+```bash
+deno run -A jsr:@your-scope/passwd-nsite publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
+```
+
+Run it directly:
+
+```bash
+deno run -A mod.ts publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
+```
+
+Or through the task in `deno.json`:
+
+```bash
+deno task publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
+```
+
+For agent use, every publishing input must be provided explicitly on the command line.
+
+- `--site-id`
+- `--password` or `--password-stdin`
+- `--nsec`
+- one or more `--relay`
+- one or more `--server`
+
+Optional metadata can still be provided with `--title` and `--description`.
+
 The exact signer and Blossom tooling may vary, but the required steps do not.
 
 ### 1. Build The Locked Shell

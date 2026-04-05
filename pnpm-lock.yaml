@@ -19,12 +19,6 @@ importers:
       nostr-tools:
         specifier: ^2.23.3
         version: 2.23.3(typescript@5.9.3)
-      react:
-        specifier: ^19.2.4
-        version: 19.2.4
-      react-dom:
-        specifier: ^19.2.4
-        version: 19.2.4(react@19.2.4)
     devDependencies:
       "@eslint/js":
         specifier: ^9.39.4
@@ -59,6 +53,12 @@ importers:
       prettier:
         specifier: ^3.8.1
         version: 3.8.1
+      react:
+        specifier: ^19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.4(react@19.2.4)
       rollup:
         specifier: ^4.60.1
         version: 4.60.1
