@@ -81,7 +81,7 @@ function buildRouterFiles(files: SevenZipExtractedFile[]): RouterFileRecord[] {
 
 function LoadingView({ title, message }: { title: string; message: string }) {
   return (
-    <div className="flex flex-col items-center gap-5 text-center">
+    <div className="flex flex-col items-center gap-4 text-center">
       <div className="h-12 w-12 animate-spin rounded-full border-2 border-cyan-300/25 border-t-cyan-300" />
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
@@ -270,14 +270,14 @@ function HomePage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <section className="w-full max-w-xl rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_35%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] p-8 shadow-[0_40px_120px_rgba(2,6,23,0.55)] sm:p-10">
+    <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-4 py-6 sm:px-6 sm:py-10">
+      <section className="w-full max-w-xl rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.14),transparent_38%),linear-gradient(180deg,rgba(15,23,42,0.9),rgba(2,6,23,0.92))] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.4)] backdrop-blur sm:p-8">
         {phase === "checking" || phase === "downloading" ? (
           <LoadingView title="Site is locked" message={statusMessage} />
         ) : null}
 
         {phase === "locked" ? (
-          <div className="space-y-8 text-center">
+          <div className="space-y-6 text-center">
             <div className="space-y-3">
               <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 Unlock site
@@ -287,9 +287,9 @@ function HomePage() {
               </p>
             </div>
 
-            <form className="space-y-4" onSubmit={handleUnlock}>
+            <form className="space-y-3" onSubmit={handleUnlock}>
               <input
-                className="min-h-14 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-5 text-center text-lg text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
+                className="min-h-12 w-full rounded-xl border border-white/10 bg-slate-950/80 px-4 text-center text-base text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -298,7 +298,7 @@ function HomePage() {
                 autoFocus
               />
               <button
-                className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-cyan-400 px-4 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
                 type="submit"
                 disabled={!password}
               >
@@ -319,7 +319,7 @@ function HomePage() {
         ) : null}
 
         {phase === "unlocked" ? (
-          <div className="space-y-8 text-center">
+          <div className="space-y-6 text-center">
             <div className="space-y-3">
               <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 Site is unlocked
@@ -331,7 +331,7 @@ function HomePage() {
             </div>
 
             <button
-              className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-cyan-400 px-4 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
               type="button"
               onClick={handleLock}
             >
@@ -351,7 +351,7 @@ function HomePage() {
         ) : null}
 
         {phase === "error" ? (
-          <div className="space-y-8 text-center">
+          <div className="space-y-6 text-center">
             <div className="space-y-3">
               <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 Site needs attention
@@ -363,7 +363,7 @@ function HomePage() {
             </div>
 
             <button
-              className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-cyan-400 px-4 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
               type="button"
               onClick={handleRetry}
             >

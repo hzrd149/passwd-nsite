@@ -194,7 +194,7 @@ function CopyButton({ value }: { value: string }) {
 
   return (
     <button
-      className="inline-flex min-h-10 items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 text-sm font-medium text-slate-200 transition hover:bg-white/10"
+      className="inline-flex min-h-9 items-center justify-center rounded-xl bg-white/6 px-3.5 text-sm font-medium text-slate-200 transition hover:bg-white/10"
       type="button"
       onClick={handleCopy}
     >
@@ -210,9 +210,9 @@ function QrCodePanel({ value }: { value: string }) {
   });
 
   return (
-    <div className="rounded-[28px] border border-white/10 bg-slate-950/80 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+    <div className="rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.08),transparent_55%),rgba(2,6,23,0.76)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <div
-        className="overflow-hidden rounded-2xl bg-slate-950 [&_svg]:h-auto [&_svg]:w-full"
+        className="overflow-hidden rounded-xl bg-slate-950 [&_svg]:h-auto [&_svg]:w-full"
         dangerouslySetInnerHTML={{ __html: svg }}
       />
     </div>
@@ -237,7 +237,7 @@ function RemoteSignerConnectView({
   onBack: () => void;
 }) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="space-y-3 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-300/85">
           Remote signer
@@ -251,28 +251,28 @@ function RemoteSignerConnectView({
         </p>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] sm:items-center">
+      <div className="grid gap-5 sm:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] sm:items-center">
         <div className="order-2 sm:order-1">
           {connectionUri ? (
             <QrCodePanel value={connectionUri} />
           ) : (
-            <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-white/10 bg-slate-950/80 p-6 text-center text-sm text-slate-400">
+            <div className="flex min-h-[280px] items-center justify-center rounded-2xl bg-white/[0.04] p-5 text-center text-sm text-slate-400">
               Enter a valid relay to generate a nostrconnect QR code.
             </div>
           )}
         </div>
 
-        <div className="order-1 space-y-5 sm:order-2">
+        <div className="order-1 space-y-4 sm:order-2">
           {connectionUri ? (
             <a
-              className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-cyan-400 px-4 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
               href={connectionUri}
             >
               Open signer app
             </a>
           ) : (
             <button
-              className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-slate-700 px-5 py-3 text-base font-semibold text-slate-300"
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-slate-700 px-4 py-3 text-base font-semibold text-slate-300"
               type="button"
               disabled
             >
@@ -280,14 +280,14 @@ function RemoteSignerConnectView({
             </button>
           )}
 
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-5 text-left">
+          <div className="rounded-2xl bg-white/[0.03] p-4 text-left">
             <label className="grid gap-2">
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
                 Signer relay
               </span>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <input
-                  className="min-h-12 min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
+                  className="min-h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/80 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
                   type="text"
                   value={relayValue}
                   onChange={(event) => onRelayChange(event.target.value)}
@@ -297,7 +297,7 @@ function RemoteSignerConnectView({
                   spellCheck={false}
                 />
                 <button
-                  className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/6 px-4 text-sm font-semibold text-white transition hover:bg-white/10 sm:w-auto"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-white/6 px-4 text-sm font-semibold text-white transition hover:bg-white/10 sm:w-auto"
                   type="button"
                   onClick={onRelaySet}
                 >
@@ -316,7 +316,7 @@ function RemoteSignerConnectView({
             <div className="mt-4 flex flex-wrap gap-3">
               {connectionUri ? <CopyButton value={connectionUri} /> : null}
               <button
-                className="inline-flex min-h-10 items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 text-sm font-medium text-slate-200 transition hover:bg-white/10"
+                className="inline-flex min-h-9 items-center justify-center rounded-xl bg-white/6 px-3.5 text-sm font-medium text-slate-200 transition hover:bg-white/10"
                 type="button"
                 onClick={onBack}
               >
@@ -353,7 +353,7 @@ function PublishSuccessView({
   const fallbackGatewayUrls = getFallbackGatewayUrls(result);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="space-y-3 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.32em] text-emerald-300/85">
           Locked nsite published
@@ -368,27 +368,27 @@ function PublishSuccessView({
 
       {currentGatewayUrl ? (
         <a
-          className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
+          className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-cyan-400 px-4 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
           href={currentGatewayUrl}
         >
           Open site
         </a>
       ) : null}
 
-      <div className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-5">
+      <div className="space-y-4 rounded-2xl bg-white/[0.03] p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
           Gateway links
         </p>
-        <div className="mt-4 space-y-4">
+        <div className="space-y-4">
           {currentGatewayUrl ? (
-            <div className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4">
+            <div className="rounded-xl bg-slate-950/50 px-4 py-3">
               <p className="text-sm font-medium text-white">Current gateway</p>
               <p className="mt-2 break-all font-mono text-xs text-slate-300">
                 {currentGatewayUrl}
               </p>
               <div className="mt-4 flex gap-3">
                 <a
-                  className="inline-flex min-h-10 items-center justify-center rounded-full bg-white/8 px-4 text-sm font-medium text-white transition hover:bg-white/14"
+                  className="inline-flex min-h-9 items-center justify-center rounded-xl bg-white/8 px-3.5 text-sm font-medium text-white transition hover:bg-white/14"
                   href={currentGatewayUrl}
                 >
                   Open
@@ -398,7 +398,7 @@ function PublishSuccessView({
             </div>
           ) : (
             <>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 text-sm text-slate-400">
+              <div className="rounded-xl bg-slate-950/50 px-4 py-3 text-sm text-slate-400">
                 This publish view is not currently running on a compatible nsite
                 gateway hostname, so use one of these public gateways instead.
               </div>
@@ -406,7 +406,7 @@ function PublishSuccessView({
               {fallbackGatewayUrls.map((gateway) => (
                 <div
                   key={gateway.label}
-                  className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4"
+                  className="rounded-xl bg-slate-950/50 px-4 py-3"
                 >
                   <p className="text-sm font-medium text-white">
                     {gateway.label}
@@ -416,7 +416,7 @@ function PublishSuccessView({
                   </p>
                   <div className="mt-4 flex gap-3">
                     <a
-                      className="inline-flex min-h-10 items-center justify-center rounded-full bg-white/8 px-4 text-sm font-medium text-white transition hover:bg-white/14"
+                      className="inline-flex min-h-9 items-center justify-center rounded-xl bg-white/8 px-3.5 text-sm font-medium text-white transition hover:bg-white/14"
                       href={gateway.url}
                     >
                       Open
@@ -431,11 +431,11 @@ function PublishSuccessView({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-5">
+        <div className="space-y-4 rounded-2xl bg-white/[0.03] p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
             Publish details
           </p>
-          <div className="mt-4 space-y-4 text-sm text-slate-200">
+          <div className="space-y-4 text-sm text-slate-200">
             <div>
               <p className="text-slate-400">Named site id</p>
               <p className="mt-1 font-medium text-white">{result.siteId}</p>
@@ -465,11 +465,11 @@ function PublishSuccessView({
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-5">
+        <div className="space-y-4 rounded-2xl bg-white/[0.03] p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
             Delivery status
           </p>
-          <div className="mt-4 space-y-4 text-sm text-slate-200">
+          <div className="space-y-4 text-sm text-slate-200">
             <div>
               <p className="text-slate-400">Blossom servers</p>
               <p className="mt-1 font-medium text-white">
@@ -502,7 +502,7 @@ function PublishSuccessView({
       <div className="flex flex-col gap-3 sm:flex-row">
         {showLockedSiteLink ? (
           <a
-            className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-white/10 bg-white/6 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full bg-white/6 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
             href="#/"
           >
             Back to locked site
@@ -584,7 +584,7 @@ function DirectoryInput({
   return (
     <input
       ref={inputRef}
-      className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-400 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-950"
+      className="min-h-11 rounded-xl border border-white/10 bg-slate-950/80 px-4 text-sm text-slate-200 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-400 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-950"
       type="file"
       multiple
       onChange={onChange}
@@ -986,11 +986,27 @@ function PublishPage() {
     folderFiles.length > 0 &&
     password.trim().length > 0 &&
     effectiveSiteId.length > 0;
+  const publishSignerKind = publishSigner?.kind ?? null;
+  const remoteSessionTimeRemaining = remoteSessionExpiresAt
+    ? Math.max(0, remoteSessionExpiresAt - Date.now())
+    : 0;
+
+  function formatDuration(durationMs: number): string {
+    const totalSeconds = Math.ceil(durationMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (minutes <= 0) {
+      return `${seconds}s`;
+    }
+
+    return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+  }
 
   if (publishResult) {
     return (
-      <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
-        <section className="w-full max-w-3xl rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.12),transparent_35%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] p-8 shadow-[0_40px_120px_rgba(2,6,23,0.55)] sm:p-10">
+      <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-4 py-6 sm:px-6 sm:py-10">
+        <section className="w-full max-w-3xl rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.16),transparent_38%),linear-gradient(180deg,rgba(15,23,42,0.9),rgba(2,6,23,0.92))] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.4)] backdrop-blur sm:p-8">
           <PublishSuccessView
             result={publishResult}
             showLockedSiteLink={hasLockedArchive}
@@ -1001,9 +1017,9 @@ function PublishPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-4 py-6 sm:px-6 sm:py-10">
       <section
-        className={`w-full ${phase === "remote-connect" ? "max-w-3xl" : "max-w-xl"} rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_35%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] p-8 shadow-[0_40px_120px_rgba(2,6,23,0.55)] sm:p-10`}
+        className={`w-full ${phase === "remote-connect" ? "max-w-3xl" : "max-w-xl"} rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.14),transparent_38%),linear-gradient(180deg,rgba(15,23,42,0.9),rgba(2,6,23,0.92))] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.4)] backdrop-blur sm:p-8`}
       >
         {phase === "loading" ? (
           <LoadingView title="Preparing publish" message={statusMessage} />
@@ -1026,7 +1042,7 @@ function PublishPage() {
         ) : null}
 
         {phase === "connect" ? (
-          <div className="space-y-8 text-center">
+          <div className="space-y-6 text-center">
             <div className="space-y-3">
               <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 Publish site
@@ -1039,14 +1055,14 @@ function PublishPage() {
 
             <div className="grid gap-4 text-left">
               <button
-                className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-cyan-400 px-4 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300"
                 type="button"
                 onClick={handleConnectPublisher}
               >
                 Connect NIP-07 signer
               </button>
 
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-5 text-left">
+              <div className="rounded-2xl bg-white/[0.03] p-4 text-left">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
                   Remote signer
                 </p>
@@ -1055,7 +1071,7 @@ function PublishPage() {
                   nostrconnect link or scanning a QR code in your signer app.
                 </p>
                 <button
-                  className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full border border-white/10 bg-white/6 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                  className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-white/6 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
                   type="button"
                   onClick={handleConnectRemoteSigner}
                 >
@@ -1081,7 +1097,7 @@ function PublishPage() {
         ) : null}
 
         {phase === "ready" || phase === "success" ? (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div className="space-y-3 text-center">
               <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 {isUpdateMode ? "Update site" : "Publish site"}
@@ -1094,7 +1110,7 @@ function PublishPage() {
             </div>
 
             {publishProfile ? (
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-5">
+              <div className="space-y-4 rounded-2xl bg-white/[0.03] p-4">
                 <div className="flex items-center gap-4">
                   <IdentityAvatar
                     picture={publishProfile.picture}
@@ -1110,8 +1126,8 @@ function PublishPage() {
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-left">
+                <div className="grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-2">
+                  <div className="text-left">
                     <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
                       Outbox relays
                     </p>
@@ -1122,7 +1138,7 @@ function PublishPage() {
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-left">
+                  <div className="text-left">
                     <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
                       Blossom servers
                     </p>
@@ -1132,6 +1148,32 @@ function PublishPage() {
                         : `${publishProfile.defaultBlossomServers.length} default server(s)`}
                     </p>
                   </div>
+
+                  <div className="text-left sm:col-span-2">
+                    <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+                      Signer
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-slate-100">
+                      {publishSignerKind === "remote"
+                        ? "Remote signer"
+                        : "NIP-07 extension"}
+                    </p>
+                  </div>
+
+                  {publishSignerKind === "remote" ? (
+                    <div className="rounded-xl bg-cyan-400/10 px-4 py-3 text-left sm:col-span-2">
+                      <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/80">
+                        Session
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-white">
+                        Expires in {formatDuration(remoteSessionTimeRemaining)}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-300">
+                        Remove old `passwd-nsite` approvals in your signer app
+                        if you want to clean up duplicates there.
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -1175,7 +1217,7 @@ function PublishPage() {
               </label>
 
               {isUpdateMode ? (
-                <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm">
+                <div className="rounded-xl bg-cyan-400/10 px-4 py-3 text-sm">
                   <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/80">
                     Update mode
                   </p>
@@ -1190,9 +1232,9 @@ function PublishPage() {
                 </div>
               ) : null}
 
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/40">
+              <div className="overflow-hidden rounded-2xl bg-white/[0.03]">
                 <button
-                  className="flex min-h-12 w-full items-center justify-between px-4 text-left text-sm font-medium text-slate-200"
+                  className="flex min-h-11 w-full items-center justify-between px-4 text-left text-sm font-medium text-slate-200"
                   type="button"
                   onClick={() => setShowAdvanced((value) => !value)}
                   aria-expanded={showAdvanced}
@@ -1215,7 +1257,7 @@ function PublishPage() {
                           Nsite name
                         </span>
                         <input
-                          className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
+                          className="min-h-11 rounded-xl border border-white/10 bg-slate-950/80 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
                           type="text"
                           value={siteId}
                           onChange={(event) =>
@@ -1235,7 +1277,7 @@ function PublishPage() {
                         Site title
                       </span>
                       <input
-                        className="min-h-12 rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
+                        className="min-h-11 rounded-xl border border-white/10 bg-slate-950/80 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
                         type="text"
                         value={title}
                         onChange={(event) => setTitle(event.target.value)}
@@ -1248,7 +1290,7 @@ function PublishPage() {
                         Site description
                       </span>
                       <textarea
-                        className="min-h-28 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
+                        className="min-h-28 rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/60"
                         value={description}
                         onChange={(event) => setDescription(event.target.value)}
                         placeholder="Optional description"
@@ -1259,7 +1301,7 @@ function PublishPage() {
               </div>
 
               <button
-                className="inline-flex min-h-14 w-full items-center justify-center rounded-full bg-cyan-400 px-5 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-cyan-400 px-4 py-3 text-base font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
                 onClick={handlePublish}
                 disabled={!canPublish}
