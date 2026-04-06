@@ -24,10 +24,10 @@ https://0ygl461f4ecz5thkn8eksa36nepjpij86s83ti8yzokopd3ag5passwd.nsite.lol
 Install the CLI globally with Deno:
 
 ```bash
-deno install --allow-read --allow-net -f -g -n passwd-snite jsr:@hzrd149/passwd-nsite
+deno install --allow-read --allow-net -f -g -n passwd-nsite jsr:@hzrd149/passwd-nsite
 ```
 
-After installing, you can run the CLI as `passwd-snite`.
+After installing, you can run the CLI as `passwd-nsite`.
 
 Publish a locked nsite directly from JSR with Deno:
 

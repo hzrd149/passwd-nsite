@@ -12,10 +12,10 @@ Use the published JSR CLI, not local repo entrypoints, unless the user explicitl
 Install the CLI globally with Deno when repeated use is expected:
 
 ```bash
-deno install --allow-read --allow-net -f -g -n passwd-snite jsr:@hzrd149/passwd-nsite
+deno install --allow-read --allow-net -f -g -n passwd-nsite jsr:@hzrd149/passwd-nsite
 ```
 
-After installation, the command can be run as `passwd-snite`.
+After installation, the command can be run as `passwd-nsite`.
 
 Run:
 
