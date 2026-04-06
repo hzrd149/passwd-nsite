@@ -1,4 +1,4 @@
-import { basename, join, relative, resolve } from "@std/path";
+import { basename, fromFileUrl, join, relative, resolve } from "@std/path";
 
 import { getContentTypeForPath } from "../../src/lib/mediaTypes.ts";
 import {
@@ -72,10 +72,9 @@ export async function buildArchiveInputsFromDirectory(
 }
 
 async function readBuildAssetFiles(
-  distDir: string,
   onProgress?: (progress: PublishProgress) => void,
 ): Promise<BuildAssetFile[]> {
-  const resolvedDistDir = resolve(distDir);
+  const resolvedDistDir = fromFileUrl(new URL("../../dist", import.meta.url));
   const assetsManifestPath = join(resolvedDistDir, "assets.json");
 
   onProgress?.({ message: `Reading ${assetsManifestPath}...` });
@@ -127,11 +126,10 @@ async function readBuildAssetFiles(
 }
 
 export async function createPublishBundleFromDisk(
-  distDir: string,
   encryptedArchive: Uint8Array,
   onProgress?: (progress: PublishProgress) => void,
 ): Promise<PreparedPublishBundle> {
-  const buildFiles = await readBuildAssetFiles(distDir, onProgress);
+  const buildFiles = await readBuildAssetFiles(onProgress);
 
   onProgress?.({ message: "Hashing /site.7z..." });
 

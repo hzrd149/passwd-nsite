@@ -12,7 +12,6 @@ import { createEncryptedArchive } from "./cli/lib/7zip.ts";
 import { createLocalPublishSigner } from "./cli/lib/signer.ts";
 
 type CliOptions = {
-  distDir: string;
   siteId: string;
   password?: string;
   passwordStdin: boolean;
@@ -43,7 +42,6 @@ Examples:
   deno run --allow-read --allow-write --allow-net jsr:@hzrd149/passwd-nsite publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com --out ./site.7z
 
 Options:
-  --dist <dir>            Build output directory (default: dist)
   --site-id <id>          Named-site id, required
   --password <value>      Site archive password
   --password-stdin        Read the site archive password from stdin
@@ -57,6 +55,7 @@ Options:
   --help                  Show this help
 
 Permissions:
+  --allow-read is used for the input site directory and packaged publish assets.
   Add --allow-write when using --out.
   The bundled shebang already includes --allow-write so executable use supports --out.
 `);
@@ -77,7 +76,6 @@ function requireOptionValue(
 
 function parseArgs(args: string[]): ParsedArgs {
   const options: CliOptions = {
-    distDir: "dist",
     siteId: "",
     passwordStdin: false,
     relays: [],
@@ -94,10 +92,6 @@ function parseArgs(args: string[]): ParsedArgs {
       case "--help":
         printUsage();
         Deno.exit(0);
-        break;
-      case "--dist":
-        options.distDir = requireOptionValue(args, index, arg);
-        index += 1;
         break;
       case "--site-id":
         options.siteId = requireOptionValue(args, index, arg);
@@ -220,7 +214,6 @@ async function handlePublish(
   }
 
   const bundle = await createPublishBundleFromDisk(
-    options.distDir,
     archiveBytes,
     ({ message }) => logProgress(message),
   );
