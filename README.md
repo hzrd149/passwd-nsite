@@ -24,16 +24,16 @@ https://0ygl461f4ecz5thkn8eksa36nepjpij86s83ti8yzokopd3ag5passwd.nsite.lol
 Install the CLI globally with Deno:
 
 ```bash
-deno install --allow-read --allow-net -f -g -n nsyte jsr:@hzrd149/passwd-nsite
+deno install --allow-read --allow-net -f -g -n passwd-snite jsr:@hzrd149/passwd-nsite
 ```
 
 If you want to use `--out`, include `--allow-write` when installing:
 
 ```bash
-deno install --allow-read --allow-write --allow-net -f -g -n nsyte jsr:@hzrd149/passwd-nsite
+deno install --allow-read --allow-write --allow-net -f -g -n passwd-snite jsr:@hzrd149/passwd-nsite
 ```
 
-After installing, you can run the CLI as `nsyte`.
+After installing, you can run the CLI as `passwd-snite`.
 
 Publish a locked nsite directly from JSR with Deno:
 
