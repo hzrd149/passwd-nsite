@@ -17,7 +17,7 @@ When someone visits the site:
 The password-protected content is not visible until the archive is successfully decrypted in the browser.
 
 Demo site:
-[https://0ygl461f4ecz5thkn8eksa36nepjpij86s83ti8yzokopd3ag5passwd.nsite.lol](https://0ygl461f4ecz5thkn8eksa36nepjpij86s83ti8yzokopd3ag5syncabout.nsite.lol/) passowrd is `syncing`
+[https://0ygl461f4ecz5thkn8eksa36nepjpij86s83ti8yzokopd3ag5syncabout.nsite.lol/](https://0ygl461f4ecz5thkn8eksa36nepjpij86s83ti8yzokopd3ag5syncabout.nsite.lol/) password is `syncing`
 
 ## CLI From JSR
 
