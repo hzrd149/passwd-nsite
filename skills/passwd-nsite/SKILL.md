@@ -15,12 +15,6 @@ Install the CLI globally with Deno when repeated use is expected:
 deno install --allow-read --allow-net -f -g -n passwd-snite jsr:@hzrd149/passwd-nsite
 ```
 
-If `--out` will be used, install it with write permission:
-
-```bash
-deno install --allow-read --allow-write --allow-net -f -g -n passwd-snite jsr:@hzrd149/passwd-nsite
-```
-
 After installation, the command can be run as `passwd-snite`.
 
 Run:
@@ -45,8 +39,6 @@ printf '%s' "$SITE_PASSWORD" | deno run --allow-read --allow-net jsr:@hzrd149/pa
   --server <https://blossom.example.com>
 ```
 
-Add `--allow-write` only when using `--out` to save the generated `site.7z`.
-
 ## Required Inputs
 
 Provide all publish inputs explicitly:
@@ -62,7 +54,6 @@ Optional flags:
 
 - `--title <text>`
 - `--description <text>`
-- `--out <path>`
 - `--dry-run`
 
 ## Procedure
@@ -82,7 +73,7 @@ Optional flags:
 
 - Empty site directory
 - Invalid `--site-id`
-- Missing `--allow-read`, `--allow-net`, or `--allow-write` when `--out` is used
+- Missing `--allow-read` or `--allow-net`
 - No Blossom server accepted the full bundle
 - All relay publishes failed
 

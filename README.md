@@ -27,12 +27,6 @@ Install the CLI globally with Deno:
 deno install --allow-read --allow-net -f -g -n passwd-snite jsr:@hzrd149/passwd-nsite
 ```
 
-If you want to use `--out`, include `--allow-write` when installing:
-
-```bash
-deno install --allow-read --allow-write --allow-net -f -g -n passwd-snite jsr:@hzrd149/passwd-nsite
-```
-
 After installing, you can run the CLI as `passwd-snite`.
 
 Publish a locked nsite directly from JSR with Deno:
@@ -70,13 +64,11 @@ Optional inputs:
 
 - `--title`
 - `--description`
-- `--out`
 - `--dry-run`
 
 Permissions:
 
 - `--allow-read` to read the site folder and packaged publish assets
 - `--allow-net` to upload to Blossom servers and publish to relays
-- `--allow-write` only if using `--out`
 
 The CLI builds `site.7z`, uploads the required blobs, signs the named-site manifest, and publishes it to the relays you provide.

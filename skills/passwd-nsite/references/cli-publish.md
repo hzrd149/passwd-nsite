@@ -36,18 +36,6 @@ deno run --allow-read --allow-net jsr:@hzrd149/passwd-nsite publish ./my-site \
   --dry-run
 ```
 
-Write the generated archive to disk:
-
-```bash
-deno run --allow-read --allow-write --allow-net jsr:@hzrd149/passwd-nsite publish ./my-site \
-  --site-id mysite \
-  --password YOUR_PASSWORD \
-  --nsec YOUR_NSEC \
-  --relay wss://relay.example.com \
-  --server https://blossom.example.com \
-  --out ./site.7z
-```
-
 ## Required Inputs
 
 - `<siteDir>`: static site folder to archive into `site.7z`
@@ -61,14 +49,12 @@ Optional inputs:
 
 - `--title <text>`
 - `--description <text>`
-- `--out <path>`
 - `--dry-run`
 
 ## Permissions
 
 - `--allow-read` is required to read the site directory and the packaged build output directory.
 - `--allow-net` is required to upload blobs to Blossom and publish the manifest to relays.
-- `--allow-write` is only required when `--out` is used.
 
 ## What The CLI Does
 
@@ -191,7 +177,6 @@ Permission problems:
 
 - missing `--allow-read`
 - missing `--allow-net`
-- missing `--allow-write` when `--out` is used
 
 Key/signing problems:
 

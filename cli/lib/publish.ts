@@ -145,12 +145,3 @@ export async function createPublishBundleFromDisk(
 
   return preparePublishBundle(blobs);
 }
-
-export async function writeArchiveOutput(
-  archiveBytes: Uint8Array,
-  outputPath: string,
-): Promise<string> {
-  const resolvedOutputPath = resolve(outputPath);
-  await Deno.writeFile(resolvedOutputPath, archiveBytes);
-  return resolvedOutputPath;
-}

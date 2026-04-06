@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write --allow-net
+#!/usr/bin/env -S deno run --allow-read --allow-net
 
 import { uploadPublishBundle } from "./src/lib/blossom.ts";
 import { buildSignedSiteManifest } from "./src/lib/publish.ts";
@@ -6,7 +6,6 @@ import { publishEventToRelays } from "./src/lib/nostr.ts";
 import {
   buildArchiveInputsFromDirectory,
   createPublishBundleFromDisk,
-  writeArchiveOutput,
 } from "./cli/lib/publish.ts";
 import { createEncryptedArchive } from "./cli/lib/7zip.ts";
 import { createLocalPublishSigner } from "./cli/lib/signer.ts";
@@ -20,7 +19,6 @@ type CliOptions = {
   relays: string[];
   servers: string[];
   nsec: string;
-  outputPath?: string;
   dryRun: boolean;
 };
 
@@ -39,8 +37,6 @@ Usage:
 Examples:
   deno run --allow-read --allow-net jsr:@hzrd149/passwd-nsite publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
   printf '%s' YOUR_PASSWORD | deno run --allow-read --allow-net jsr:@hzrd149/passwd-nsite publish ./my-site --site-id mysite --password-stdin --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com
-  deno run --allow-read --allow-write --allow-net jsr:@hzrd149/passwd-nsite publish ./my-site --site-id mysite --password YOUR_PASSWORD --nsec YOUR_NSEC --relay wss://relay.example.com --server https://blossom.example.com --out ./site.7z
-
 Options:
   --site-id <id>          Named-site id, required
   --password <value>      Site archive password
@@ -50,14 +46,11 @@ Options:
   --relay <url>           Target relay, repeatable, required
   --server <url>          Target blossom server, repeatable, required
   --nsec <value>          Nostr private key as nsec or 32-byte hex, required
-  --out <path>            Write the generated site.7z to disk
   --dry-run               Build and sign without uploading or publishing
   --help                  Show this help
 
 Permissions:
   --allow-read is used for the input site directory and packaged publish assets.
-  Add --allow-write when using --out.
-  The bundled shebang already includes --allow-write so executable use supports --out.
 `);
 }
 
@@ -122,10 +115,6 @@ function parseArgs(args: string[]): ParsedArgs {
         break;
       case "--nsec":
         options.nsec = requireOptionValue(args, index, arg);
-        index += 1;
-        break;
-      case "--out":
-        options.outputPath = requireOptionValue(args, index, arg);
         index += 1;
         break;
       case "--dry-run":
@@ -204,14 +193,6 @@ async function handlePublish(
     password,
     "site.7z",
   );
-
-  if (options.outputPath) {
-    const writtenPath = await writeArchiveOutput(
-      archiveBytes,
-      options.outputPath,
-    );
-    logProgress(`Wrote archive to ${writtenPath}`);
-  }
 
   const bundle = await createPublishBundleFromDisk(
     archiveBytes,
